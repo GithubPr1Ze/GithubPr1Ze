@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Classe 0x0B : Smart Card (CCID) -->
+    <usb-device class="11" />
+</resources>
