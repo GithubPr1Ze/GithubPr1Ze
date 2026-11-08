@@ -33,30 +33,43 @@ l'ancienne sans perdre l'historique.
 
 ## Ce que fait la V1
 
-- Communication USB **CCID** directe (sans pilote) : lecteurs niveau APDU, TPDU T=0 et TPDU T=1.
-- Lecture de toutes les données des applications **Gen1 (TACHO)** et **Gen2 (SMRDT)**, avec les
-  signatures calculées par la carte, comme un logiciel de téléchargement. **Aucune écriture sur la carte.**
-- Enregistrement au format `.DDD` (Annexe 1C, Appendice 7).
-- Affichage : identité, permis, validité, génération de carte, dernier véhicule, et pour chaque jour
-  une frise des activités avec les totaux et les kilomètres.
+- Lecture USB **CCID** directe (sans pilote), toutes les données **Gen1** et **Gen2** avec les
+  signatures de la carte. **Aucune écriture sur la carte.** Testé sur une vraie carte Gen2 V1
+  avec un lecteur Alcorlink (058F:9540).
+- **Un dossier par conducteur** (clé : n° de carte) ; toutes les lectures sont gardées en `.DDD`
+  et fusionnées : l'historique dépasse la fenêtre conservée par la carte.
+- **Email** : à chaque lecture, si aucun email n'est renseigné pour ce conducteur, l'application
+  propose d'en ajouter un.
+- **Trois onglets** : tableau de bord, calendrier, liste des jours ; détail complet d'une journée.
+  Heures en **heure de Paris**.
+- **Contrôles réglementaires**, chacun avec son article :
+  - règlement (CE) 561/2006 (consolidé au 20/08/2020) : pauses (art. 7), conduite journalière,
+    hebdomadaire et sur deux semaines (art. 6), repos journalier dans les 24 h et repos réduits
+    (art. 8 § 2 et § 4), délai et enchaînement des repos hebdomadaires, compensation (art. 8 § 6) ;
+  - Code des transports, conducteurs grands routiers : temps de service journalier (12 h),
+    hebdomadaire (56 h) et trimestriel (689 h), travail de nuit (L3312-1), pauses (L3312-2) ;
+    heures au-delà de 35 h et de 43 h (équivalence) et heures de nuit 21h–6h affichées.
+- Import / export `.DDD`, journal technique copiable.
+
+Limites : seules les données de la carte sont prises en compte (lieu du repos hebdomadaire,
+retour au domicile, conduite en équipage et dérogations conventionnelles sont à vérifier).
 
 ## Feuille de route
 
-- V2 : véhicules utilisés, lieux de début/fin de journée, positions GNSS, événements et anomalies,
-  affichage en heure locale.
-- V3 : contrôle des règles du règlement (CE) 561/2006 (pauses, conduite journalière / hebdomadaire /
-  bi-hebdomadaire, repos journaliers et hebdomadaires) et alertes.
-- V4 : historique fusionné sur plusieurs lectures, exports PDF/CSV.
+Voir `CAHIER_DES_CHARGES.md` : sauvegarde NAS, envoi des rapports par email, découchers et repas
+(GPS), fiche de paie estimée, exports PDF/CSV.
 
 ## Structure du code
 
 | Dossier | Contenu |
 |---|---|
-| `core/` | Kotlin pur, testé sur JVM : protocole CCID, T=1, APDU, lecture carte, format `.DDD`, décodage. |
+| `core/` | Kotlin pur, testé sur JVM : protocole CCID, T=1, APDU, lecture carte, format `.DDD`, décodage, règles. |
 | `app/` | Application Android (Jetpack Compose) : accès USB Host, interface. |
 
 ```bash
-./gradlew -p core test          # tests (carte et lecteurs simulés)
+./gradlew -p core test          # tests (carte, lecteurs et semaines simulés)
+./gradlew -p core dumpCard -Pout=../samples/carte.DDD   # lire une carte depuis un PC (PC/SC)
+./gradlew :app:testDebugUnitTest  # captures d'écran (app/build/shots) si samples/carte-reelle.DDD existe
 ./gradlew :app:assembleDebug    # APK (nécessite le SDK Android)
 ```
 

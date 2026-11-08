@@ -80,16 +80,35 @@ class TachoCardDownloader(
             warn("Lecture de ${ef.name} impossible : ${e.message}")
             return null
         }
-        var signature: ByteArray? = null
-        if (hashed) {
-            val le = if (gen == Generation.GEN1) 128 else 256
-            val s = channel.transmit(CommandApdu(0x00, 0x2A, 0x9E, 0x9A, le = le))
-            if (s.isOk && s.data.isNotEmpty()) signature = s.data
-            else warn("Signature refusée pour ${ef.name} (SW %04X)".format(s.sw))
-        }
+        val signature = if (hashed && gen != null) sign(gen, ef) else null
         log.log("${gen?.name ?: "MF"} ${ef.name} : ${data.size} octets" + if (signature != null) " + signature ${signature.size}" else "")
         return CardFile(gen, ef.fid, data, signature)
     }
+
+    /**
+     * PSO: COMPUTE DIGITAL SIGNATURE. Gen1 : RSA 1024, 128 octets. Gen2 : ECDSA dont la taille dépend
+     * de la courbe de la carte (64, 96 ou 128 octets) ; une carte répond 6700 si Le ne correspond pas,
+     * on essaie donc les tailles possibles en recalculant l'empreinte à chaque essai.
+     */
+    private fun sign(gen: Generation, ef: EfDef): ByteArray? {
+        val candidates = if (gen == Generation.GEN1) listOf(128) else
+            (listOfNotNull(gen2SignatureLength) + listOf(64, 96, 128, 132, 256)).distinct()
+        var lastSw = 0
+        for ((i, le) in candidates.withIndex()) {
+            if (i > 0 && !channel.transmit(CommandApdu(0x80, 0x2A, 0x90, 0x00)).isOk) break
+            val s = channel.transmit(CommandApdu(0x00, 0x2A, 0x9E, 0x9A, le = le))
+            if (s.isOk && s.data.isNotEmpty()) {
+                if (gen == Generation.GEN2) gen2SignatureLength = s.data.size
+                return s.data
+            }
+            lastSw = s.sw
+            if (s.sw != 0x6700) break
+        }
+        warn("Signature refusée pour ${ef.name} (SW %04X)".format(lastSw))
+        return null
+    }
+
+    private var gen2SignatureLength: Int? = null
 
     private fun readBinaryAll(): ByteArray {
         var out = ByteArray(0)

@@ -32,3 +32,18 @@ tasks.test {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
+
+// Lecture d'une vraie carte depuis un PC (PC/SC) : ./gradlew -p core dumpCard -Pout=chemin.DDD
+tasks.register<JavaExec>("dumpCard") {
+    group = "tacho"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("fr.tachoperso.core.PcscDump")
+    args(project.findProperty("out")?.toString() ?: "carte.DDD")
+}
+
+tasks.register<JavaExec>("inspect") {
+    group = "tacho"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("fr.tachoperso.core.InspectKt")
+    args(project.findProperty("file")?.toString() ?: "carte.DDD")
+}
