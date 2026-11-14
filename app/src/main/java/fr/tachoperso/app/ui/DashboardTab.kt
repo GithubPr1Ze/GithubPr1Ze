@@ -80,6 +80,16 @@ fun DashboardTab(
                         "au-delà de 43 h (équivalence) : ${hm((service - Limits.EQUIVALENCE_WEEKLY).coerceAtLeast(0))}",
                 )
                 KeyValue("Journées à plus de 9 h de conduite", "${a.extensionsUsed(monday)} / ${Limits.EXTENSIONS_PER_WEEK}")
+                Divider()
+                Row(Modifier.fillMaxWidth()) {
+                    Metric("Conduite restante cette semaine", hm(a.weekDrivingLeft(monday)), Modifier.weight(1f))
+                    Metric("Maximum semaine suivante", hm(a.nextWeekDrivingMax(monday)), Modifier.weight(1f))
+                }
+                Text(
+                    "Situation à la dernière lecture de la carte" + (profile.lastRead?.let { " (${it.local()})" } ?: "") + ".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 

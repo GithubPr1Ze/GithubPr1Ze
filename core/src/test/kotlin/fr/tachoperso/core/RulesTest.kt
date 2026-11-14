@@ -55,6 +55,11 @@ class RulesTest {
         assertEquals(emptyList(), a.findings, a.findings.joinToString("\n"))
         assertEquals(5, a.shifts.size)
         assertEquals(40 * 60L, a.weekDriving(LocalDate.of(2026, 11, 2)))
+        // 56 h − 40 h cette semaine ; la suivante est bornée par les 90 h sur deux semaines.
+        assertEquals(16 * 60L, a.weekDrivingLeft(LocalDate.of(2026, 11, 2)))
+        assertEquals(50 * 60L, a.nextWeekDrivingMax(LocalDate.of(2026, 11, 2)))
+        // Semaine suivante vide : il reste 90 h − 40 h, sous le plafond de 56 h.
+        assertEquals(50 * 60L, a.weekDrivingLeft(LocalDate.of(2026, 11, 9)))
     }
 
     @Test

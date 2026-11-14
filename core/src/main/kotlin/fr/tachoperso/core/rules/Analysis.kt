@@ -135,6 +135,14 @@ class Analysis(val timeline: List<Period>, val zone: ZoneId = ZoneId.of("Europe/
     fun weekDriving(monday: LocalDate): Long = Timeline.minutes(weekSlice(monday), ActivityType.DRIVING)
     fun weekService(monday: LocalDate): Long = weekSlice(monday).filter { !it.isRest }.sumOf { it.minutes }
     fun fortnightDriving(monday: LocalDate): Long = weekDriving(monday) + weekDriving(monday.minusWeeks(1))
+    /** Conduite encore possible dans la semaine : plafonds de 56 h par semaine et de 90 h sur deux semaines. */
+    fun weekDrivingLeft(monday: LocalDate): Long =
+        minOf(Limits.WEEKLY_DRIVING - weekDriving(monday), Limits.FORTNIGHT_DRIVING - fortnightDriving(monday)).coerceAtLeast(0)
+
+    /** Conduite maximale de la semaine suivante, compte tenu de celle-ci (90 h sur deux semaines). */
+    fun nextWeekDrivingMax(monday: LocalDate): Long =
+        minOf(Limits.WEEKLY_DRIVING.toLong(), Limits.FORTNIGHT_DRIVING - weekDriving(monday)).coerceAtLeast(0)
+
     fun extensionsUsed(monday: LocalDate): Int =
         shifts.count { monday(localDate(it.start)) == monday && it.driving > Limits.DAILY_DRIVING }
 
