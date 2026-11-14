@@ -50,7 +50,8 @@ fun DaysTab(history: DriverHistory, onOpenDay: (LocalDate) -> Unit) {
                         Spacer(Modifier.width(8.dp))
                     }
                     val countries = history.countriesOn(day.date)
-                    Text((countries?.let { "$it · " } ?: "") + "${day.distanceKm} km", style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                    val away = history.nightsOn(day.date).any { it.status == fr.tachoperso.core.rules.NightStatus.AWAY }
+                    Text((countries?.let { "$it · " } ?: "") + "${day.distanceKm} km" + (if (away) " · découché" else ""), style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DayBar(day.date, day.periods)
@@ -74,7 +75,7 @@ fun DaysTab(history: DriverHistory, onOpenDay: (LocalDate) -> Unit) {
 }
 
 @Composable
-fun DayDetail(history: DriverHistory, date: LocalDate) {
+fun DayDetail(history: DriverHistory, date: LocalDate, onSetNight: (java.time.Instant, fr.tachoperso.core.rules.NightStatus?) -> Unit = { _, _ -> }) {
     val a = history.analysis
     val day = history.localDays.firstOrNull { it.date == date }
     val findings = a.findingsOn(date)
@@ -98,6 +99,7 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
                 }
             }
         }
+        history.nightsOn(date).forEach { n -> item { NightPanel(n, onSetNight) } }
         val crossings = history.ferryOn(date)
         if (crossings.isNotEmpty()) {
             item {

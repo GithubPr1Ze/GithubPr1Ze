@@ -31,4 +31,15 @@ fun main(args: Array<String>) {
     println("Traversées ferry/train : ${h.ferry.size}, total ${hm(h.ferry.sumOf { it.minutes })}, en repos ${hm(h.ferry.sumOf { it.restMinutes })}, estimées ${h.ferry.count { it.estimated }}, inconnues ${h.ferry.count { !it.known }}")
     h.ferryMonths.forEach { m -> println("  ${m.month} : ${m.count} trav., ${hm(m.minutes)} dont repos ${hm(m.restMinutes)}, estimées ${m.estimatedCount} (${hm(m.estimatedMinutes)}), inconnues ${m.unknownCount}") }
     h.ferry.filter { it.estimated || !it.known }.forEach { println("    ${it.from.atZone(a.zone).toLocalDateTime()} → ${it.to?.atZone(a.zone)?.toLocalTime()} ${hm(it.minutes)} coupé après ${it.cutAfterSeconds} s") }
+    println("Zones de repos hebdo : " + h.restClusters.take(5).joinToString { "${it.center.label()} ×${it.weeklyRests}" })
+    println("Domicile : ${h.home?.label()}")
+    println("Nuits : ${h.nights.size}, découchés ${h.nights.count { it.status == fr.tachoperso.core.rules.NightStatus.AWAY }}, domicile ${h.nights.count { it.status == fr.tachoperso.core.rules.NightStatus.HOME }}, inconnus ${h.nights.count { it.status == null }}, sur ferry ${h.nights.count { it.onFerry }}")
+    println("  marges : " + h.nights.groupingBy { u -> when (val x = u.uncertaintyKm) { null -> "aucune"; 0.0 -> "0"; in 0.0..2.0 -> "<=2km"; in 2.0..30.0 -> "<=30km"; else -> ">30km" } }.eachCount())
+    h.nightMonths.forEach { println("  ${it.month} : découchés ${it.away}, domicile ${it.home}, inconnus ${it.unknown}") }
+    println("Dernières nuits :")
+    h.nights.takeLast(14).forEach { println("  ${it.rest.start.atZone(a.zone).toLocalDateTime()} → ${it.rest.end.atZone(a.zone).toLocalDateTime()} ${hm(it.rest.minutes)} ${if (it.weekly) "HEBDO" else ""} ${it.status} ${it.point?.label()} (±${it.uncertaintyKm?.toInt()} km) ${if (it.onFerry) "FERRY" else ""}") }
+    val tl = h.timeline
+    val outAtStart = h.nights.count { n -> tl.any { it.cardOut && it.start <= n.rest.start.plusSeconds(900) && it.end > n.rest.start } }
+    val outAtEnd = h.nights.count { n -> tl.any { it.cardOut && it.end >= n.rest.end.minusSeconds(900) && it.start < n.rest.end } }
+    println("Nuits avec carte retirée au début : $outAtStart, à la fin : $outAtEnd, sur ${h.nights.size}")
 }

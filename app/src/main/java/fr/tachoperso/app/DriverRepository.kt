@@ -1,9 +1,11 @@
 package fr.tachoperso.app
 
 import fr.tachoperso.core.rules.DriverHistory
+import fr.tachoperso.core.rules.NightStatus
 import fr.tachoperso.core.tacho.CardDump
 import fr.tachoperso.core.tacho.CardReport
 import fr.tachoperso.core.tacho.DddFormat
+import fr.tachoperso.core.tacho.GeoPoint
 import org.json.JSONObject
 import java.io.File
 import java.time.Instant
@@ -65,7 +67,51 @@ class DriverRepository(root: File) {
 
     fun history(key: String): DriverHistory {
         val reports = reads(key).mapNotNull { f -> runCatching { CardReport(DddFormat.read(f.readBytes())) }.getOrNull() }
-        return DriverHistory(reports, until = loadProfile(key)?.lastRead ?: Instant.now())
+        val settings = settings(key)
+        return DriverHistory(
+            reports,
+            until = loadProfile(key)?.lastRead ?: Instant.now(),
+            declaredHome = settings.home,
+            nightOverrides = settings.nights,
+        )
+    }
+
+    /** Réglages du conducteur : domicile déclaré et corrections manuelles des nuits. */
+    data class Settings(val home: GeoPoint?, val nights: Map<Instant, NightStatus>)
+
+    fun settings(key: String): Settings {
+        val f = File(driversDir, "$key/settings.json")
+        if (!f.isFile) return Settings(null, emptyMap())
+        return runCatching {
+            val j = JSONObject(f.readText())
+            val home = j.optJSONObject("home")?.let { GeoPoint(it.getDouble("lat"), it.getDouble("lon")) }
+            val n = j.optJSONObject("nights")
+            val nights = n?.keys()?.asSequence()?.mapNotNull { k ->
+                runCatching { Instant.ofEpochSecond(k.toLong()) to NightStatus.valueOf(n.getString(k)) }.getOrNull()
+            }?.toMap() ?: emptyMap()
+            Settings(home, nights)
+        }.getOrElse { Settings(null, emptyMap()) }
+    }
+
+    fun setHome(key: String, home: GeoPoint?) = writeSettings(key, settings(key).copy(home = home))
+
+    fun setNight(key: String, restStart: Instant, status: NightStatus?) {
+        val s = settings(key)
+        val nights = s.nights.toMutableMap()
+        if (status == null) nights.remove(restStart) else nights[restStart] = status
+        writeSettings(key, s.copy(nights = nights))
+    }
+
+    private fun writeSettings(key: String, s: Settings) {
+        val j = JSONObject()
+        s.home?.let { j.put("home", JSONObject().put("lat", it.latitude).put("lon", it.longitude)) }
+        val n = JSONObject()
+        s.nights.forEach { (k, v) -> n.put(k.epochSecond.toString(), v.name) }
+        j.put("nights", n)
+        val dir = File(driversDir, key).apply { mkdirs() }
+        val tmp = File(dir, "settings.json.tmp")
+        tmp.writeText(j.toString(2))
+        tmp.renameTo(File(dir, "settings.json"))
     }
 
     private fun loadProfile(key: String): DriverProfile? {

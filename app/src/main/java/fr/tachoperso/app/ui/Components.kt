@@ -171,8 +171,11 @@ fun Legend() {
 }
 
 @Composable
-fun SeverityBadge(severity: Severity, text: String = severity.label) {
-    val color = severityColor(severity)
+fun SeverityBadge(severity: Severity, text: String = severity.label) = TagBadge(text, severityColor(severity))
+
+/** Étiquette encadrée, couleur libre. */
+@Composable
+fun TagBadge(text: String, color: Color) {
     Box(
         Modifier.border(1.dp, color, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
     ) {

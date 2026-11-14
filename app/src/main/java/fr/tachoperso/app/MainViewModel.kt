@@ -93,6 +93,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissMessage() = _state.update { it.copy(error = null, status = null) }
 
+    /** Correction manuelle d'une nuit (null = revenir au calcul automatique). */
+    fun setNight(restStart: java.time.Instant, status: fr.tachoperso.core.rules.NightStatus?) =
+        updateSettings { repo.setNight(it, restStart, status) }
+
+    /** Domicile déclaré (null = détection automatique). */
+    fun setHome(home: fr.tachoperso.core.tacho.GeoPoint?) = updateSettings { repo.setHome(it, home) }
+
+    private fun updateSettings(change: (String) -> Unit) {
+        val key = _state.value.selected?.key ?: return
+        viewModelScope.launch {
+            val history = withContext(Dispatchers.IO) {
+                runCatching { change(key); repo.history(key) }.getOrNull()
+            }
+            if (history != null) _state.update { it.copy(history = history) }
+        }
+    }
+
     fun select(key: String) {
         prefs.edit().putString("driver", key).apply()
         viewModelScope.launch {

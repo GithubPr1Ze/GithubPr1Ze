@@ -192,10 +192,10 @@ fun MainScreen(vm: MainViewModel) {
             when {
                 state.loadingHistory -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 history == null || profile == null -> EmptyState(state, vm::readCard)
-                state.openDay != null -> DayDetail(history, state.openDay!!)
+                state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight)
                 state.openFerry -> FerryScreen(history, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail) { vm.openFerry(true) }
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome)
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

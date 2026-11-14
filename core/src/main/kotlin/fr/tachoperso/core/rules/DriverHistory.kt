@@ -22,6 +22,10 @@ class DriverHistory(
     val zone: ZoneId = ZoneId.of("Europe/Paris"),
     /** Heure de la dernière lecture : la carte « prolonge » la journée en cours jusqu'à minuit UTC. */
     until: Instant? = null,
+    /** Domicile déclaré par le conducteur ; sinon détecté à partir des repos hebdomadaires. */
+    declaredHome: GeoPoint? = null,
+    /** Corrections manuelles des nuits, par heure de début du repos. */
+    nightOverrides: Map<Instant, NightStatus> = emptyMap(),
 ) {
     /** Lectures de la plus ancienne à la plus récente (par date du jour le plus récent). */
     private val ordered = reports.sortedBy { it.days.maxOfOrNull { d -> d.date } }
@@ -92,6 +96,23 @@ class DriverHistory(
         if (c.isEmpty()) return null
         return if (c.first() == c.last()) c.first() else "${c.first()} → ${c.last()}"
     }
+
+    private val nightData = Nights.build(analysis.restBlocks, timeline, locations, ferry, zone, declaredHome, nightOverrides)
+
+    /** Repos de 9 h et plus, avec lieu et statut domicile / découché. */
+    val nights: List<Night> = nightData.first
+
+    /** Zones de repos hebdomadaire, de la plus fréquente à la moins fréquente. */
+    val restClusters: List<RestCluster> = nightData.second
+
+    /** Domicile retenu (déclaré ou détecté), null si inconnu. */
+    val home: GeoPoint? = nightData.third
+    val homeDeclared: Boolean = declaredHome != null
+
+    fun nightsOn(date: LocalDate): List<Night> = nights.filter { it.date == date }
+
+    val nightMonths: List<NightMonth> = Nights.months(nights)
+
 }
 
 enum class LocationKind { DAY_START, DAY_END, DRIVING_3H }
