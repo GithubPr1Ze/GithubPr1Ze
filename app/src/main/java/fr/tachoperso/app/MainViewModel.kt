@@ -52,6 +52,11 @@ data class UiState(
     val openPay: Boolean = false,
     val pay: PaySettings = PaySettings(),
     val payslips: Map<java.time.YearMonth, fr.tachoperso.core.rules.PayslipCounts> = emptyMap(),
+    val dayOverrides: Map<LocalDate, fr.tachoperso.core.rules.DayOverride> = emptyMap(),
+    /** Liste des repos à préciser ouverte. */
+    val openClarify: Boolean = false,
+    /** Mois ouvert dans l'éditeur des repas / découchers. */
+    val openPayMonth: java.time.YearMonth? = null,
     val emailPrompt: EmailPrompt? = null,
 )
 
@@ -103,7 +108,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTab(tab: Tab) {
         prefs.edit().putString("tab", tab.name).apply()
-        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false, openPay = false) }
+        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false, openPay = false, openClarify = false, openPayMonth = null) }
     }
 
     fun openDay(date: LocalDate?) = _state.update { it.copy(openDay = date) }
@@ -133,7 +138,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Retour : ferme le jour ouvert, sinon l'écran ferry. */
-    fun back() = _state.update { if (it.openDay != null) it.copy(openDay = null) else it.copy(openFerry = false, openExpenses = false, openPay = false) }
+    fun back() = _state.update {
+        when {
+            it.openDay != null -> it.copy(openDay = null)
+            it.openPayMonth != null -> it.copy(openPayMonth = null)
+            it.openClarify -> it.copy(openClarify = false)
+            else -> it.copy(openFerry = false, openExpenses = false, openPay = false)
+        }
+    }
+
+    fun openClarify() = _state.update { it.copy(openClarify = true, openPayMonth = null, openDay = null) }
+
+    fun openPayMonth(m: java.time.YearMonth) = _state.update { it.copy(openPayMonth = m, openDay = null) }
+
+    fun setDayOverride(date: LocalDate, o: fr.tachoperso.core.rules.DayOverride?) {
+        val key = _state.value.selected?.key ?: return
+        _state.update { s -> s.copy(dayOverrides = s.dayOverrides.toMutableMap().apply { if (o == null) remove(date) else put(date, o) }) }
+        viewModelScope.launch(Dispatchers.IO) { repo.setDay(key, date, o) }
+    }
 
     fun dismissMessage() = _state.update { it.copy(error = null, status = null) }
 
@@ -161,7 +183,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val history = withContext(Dispatchers.Default) { runCatching { repo.history(key) }.getOrNull() }
             val settings = withContext(Dispatchers.IO) { repo.settings(key) }
             _state.update {
-                it.copy(history = history, loadingHistory = false, abroadMarkup = settings.abroadMarkup, pay = settings.pay, payslips = settings.payslips)
+                it.copy(history = history, loadingHistory = false, abroadMarkup = settings.abroadMarkup, pay = settings.pay, payslips = settings.payslips, dayOverrides = settings.days)
             }
         }
     }

@@ -40,26 +40,27 @@ private fun YearMonth.title() = monthFmt.format(this).replaceFirstChar { it.titl
 private fun num(s: String): Double? = s.trim().replace(" ", "").replace(",", ".").toDoubleOrNull()
 private fun fmt(x: Double): String = if (x == Math.floor(x)) "%.0f".format(Locale.FRANCE, x) else "%.2f".format(Locale.FRANCE, x)
 
-/** Net à payer estimé : net social fixe − impôt à la source + frais estimés. */
-private fun netEstimate(pay: PaySettings, frais: Double): Double? =
-    pay.netSocial?.let { it - (pay.incomeTax ?: 0.0) + frais }
-
-/** Tableau de bord : forfait d'heures, nuit, frais estimés et net du mois. */
+/** Tableau de bord : forfait d'heures, nuit et frais estimés du mois. */
 @Composable
-fun PaySummaryPanel(history: DriverHistory, rates: List<Rates>, pay: PaySettings, lastDate: LocalDate, onOpen: () -> Unit) {
+fun PaySummaryPanel(
+    history: DriverHistory,
+    rates: List<Rates>,
+    pay: PaySettings,
+    overrides: Map<LocalDate, fr.tachoperso.core.rules.DayOverride>,
+    lastDate: LocalDate,
+    onOpen: () -> Unit,
+    onOpenClarify: () -> Unit,
+) {
     val month = YearMonth.from(lastDate)
-    val emp = EmployerExpenses.months(history.employerExpenses(rates, pay.markupPercent)).firstOrNull { it.month == month }
+    val emp = EmployerExpenses.months(history.employerExpenses(rates, pay.markupPercent, overrides)).firstOrNull { it.month == month }
+    val toClarify = history.nightsToClarify.count { YearMonth.from(it.date) == month }
     Panel(title = "Paye de ${month.title().lowercase(Locale.FRANCE)} (estimation)") {
         Gauge("Temps de service / forfait", history.monthService(month), (pay.paidHours * 60).toLong(),
             note = "Forfait de ${fmt(pay.paidHours)} h payées quel que soit le temps réel.")
         Gauge("Heures de nuit (21 h – 6 h) / payées", history.monthNight(month), (pay.paidNightHours * 60).toLong())
-        Row(Modifier.fillMaxWidth()) {
-            Metric("Frais estimés", eur(emp?.total ?: 0.0), Modifier.weight(1f))
-            Metric("Net estimé", netEstimate(pay, emp?.total ?: 0.0)?.let { eur(it) } ?: "—", Modifier.weight(1f))
-        }
-        if (pay.netSocial == null) {
-            Text("Renseignez votre net social dans « Ma paye » pour estimer le net.", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        KeyValue("Frais estimés (pratique employeur)", eur(emp?.total ?: 0.0))
+        if (toClarify > 0) {
+            TextButton(onClick = onOpenClarify, contentPadding = PaddingValues(0.dp)) { Text("$toClarify repos à préciser ce mois-ci ›") }
         }
         TextButton(onClick = onOpen, contentPadding = PaddingValues(0.dp)) { Text("Ma paye") }
     }
@@ -75,8 +76,11 @@ fun PayScreen(
     abroadMarkup: Boolean,
     onSetPay: (PaySettings) -> Unit,
     onSetPayslip: (YearMonth, PayslipCounts?) -> Unit,
+    overrides: Map<LocalDate, fr.tachoperso.core.rules.DayOverride> = emptyMap(),
+    onOpenMonth: (YearMonth) -> Unit = {},
+    onOpenClarify: () -> Unit = {},
 ) {
-    val months = EmployerExpenses.months(history.employerExpenses(rates, pay.markupPercent))
+    val months = EmployerExpenses.months(history.employerExpenses(rates, pay.markupPercent, overrides))
     val protocol = fr.tachoperso.core.rules.Expenses.months(history.expenses(rates, abroadMarkup)).associateBy { it.month }
     var editing by remember { mutableStateOf<YearMonth?>(null) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -84,7 +88,7 @@ fun PayScreen(
         item { PaySettingsPanel(pay, onSetPay) }
         months.forEach { m ->
             item {
-                MonthPayPanel(history, m, pay, payslips[m.month], protocol[m.month]?.total) { editing = m.month }
+                MonthPayPanel(history, m, pay, payslips[m.month], protocol[m.month]?.total, { onOpenMonth(m.month) }, onOpenClarify) { editing = m.month }
             }
         }
         item {
@@ -106,22 +110,16 @@ fun PayScreen(
 private fun PaySettingsPanel(pay: PaySettings, onSave: (PaySettings) -> Unit) {
     var hours by remember(pay) { mutableStateOf(fmt(pay.paidHours)) }
     var night by remember(pay) { mutableStateOf(fmt(pay.paidNightHours)) }
-    var net by remember(pay) { mutableStateOf(pay.netSocial?.let { fmt(it) } ?: "") }
-    var tax by remember(pay) { mutableStateOf(pay.incomeTax?.let { fmt(it) } ?: "") }
     var markup by remember(pay) { mutableStateOf(fmt(pay.markupPercent)) }
     Panel(title = "Mes réglages (d'après le bulletin)") {
         NumberField("Heures payées par mois", hours) { hours = it }
         NumberField("Heures de nuit payées par mois", night) { night = it }
-        NumberField("Net social hors frais (€)", net) { net = it }
-        NumberField("Impôt prélevé à la source (€ / mois)", tax) { tax = it }
         NumberField("Majoration des frais à l'étranger (%)", markup) { markup = it }
         Button(onClick = {
             onSave(
                 PaySettings(
                     paidHours = num(hours) ?: pay.paidHours,
                     paidNightHours = num(night) ?: pay.paidNightHours,
-                    netSocial = num(net),
-                    incomeTax = num(tax),
                     markupPercent = num(markup) ?: pay.markupPercent,
                 ),
             )
@@ -148,6 +146,8 @@ private fun MonthPayPanel(
     pay: PaySettings,
     slip: PayslipCounts?,
     protocolTotal: Double?,
+    onEditDays: () -> Unit,
+    onOpenClarify: () -> Unit,
     onEditSlip: () -> Unit,
 ) {
     val service = history.monthService(m.month)
@@ -218,7 +218,15 @@ private fun MonthPayPanel(
             )
         }
         protocolTotal?.let { KeyValue("Minimum légal (protocole)", eur(it)) }
-        netEstimate(pay, m.total)?.let { KeyValue("Net à payer estimé", eur(it)) }
+        if (m.edited > 0) {
+            Text("${m.edited} journée(s) modifiée(s) à la main.", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val toClarify = history.nightsToClarify.count { YearMonth.from(it.date) == m.month }
+        if (toClarify > 0) {
+            TextButton(onClick = onOpenClarify, contentPadding = PaddingValues(0.dp)) { Text("$toClarify repos à préciser ›") }
+        }
+        TextButton(onClick = onEditDays, contentPadding = PaddingValues(0.dp)) { Text("Modifier repas et découchers jour par jour ›") }
         TextButton(onClick = onEditSlip, contentPadding = PaddingValues(0.dp)) {
             Text(if (slip == null) "Saisir mon bulletin" else "Modifier mon bulletin")
         }

@@ -21,33 +21,75 @@ data class EmployerRates(val dejeuner: Double, val diner: Double, val petitDejeu
     }
 }
 
-data class EmployerDay(val date: LocalDate, val shift: Shift, val rates: EmployerRates, val decoucher: Boolean) {
-    val total: Double get() = rates.dejeuner + rates.diner + rates.petitDejeuner + if (decoucher) rates.decoucher else 0.0
+/** Correction manuelle d'une journée : null = calcul automatique. */
+data class DayOverride(
+    val dejeuner: Boolean? = null,
+    val diner: Boolean? = null,
+    val petitDejeuner: Boolean? = null,
+    val decoucher: Boolean? = null,
+) {
+    val isEmpty: Boolean get() = dejeuner == null && diner == null && petitDejeuner == null && decoucher == null
+}
+
+data class EmployerDay(
+    val date: LocalDate,
+    val shift: Shift,
+    val rates: EmployerRates,
+    val dejeuner: Boolean,
+    val diner: Boolean,
+    val petitDejeuner: Boolean,
+    val decoucher: Boolean,
+    /** Découcher calculé automatiquement (avant correction). */
+    val autoDecoucher: Boolean,
+    val edited: Boolean,
+) {
+    val total: Double
+        get() = (if (dejeuner) rates.dejeuner else 0.0) + (if (diner) rates.diner else 0.0) +
+            (if (petitDejeuner) rates.petitDejeuner else 0.0) + (if (decoucher) rates.decoucher else 0.0)
 }
 
 /** Comptes du mois, dans les rubriques des bulletins. */
 data class EmployerMonth(val month: YearMonth, val days: List<EmployerDay>) {
-    val dejeuners: Int get() = days.size
-    val diners: Int get() = days.size
-    val petitsDejeuners: Int get() = days.size
+    val dejeuners: Int get() = days.count { it.dejeuner }
+    val diners: Int get() = days.count { it.diner }
+    val petitsDejeuners: Int get() = days.count { it.petitDejeuner }
     val decouchers: Int get() = days.count { it.decoucher }
     val total: Double get() = days.sumOf { it.total }
+    val edited: Int get() = days.count { it.edited }
 }
 
 /** Rubriques relevées sur le bulletin du mois, pour comparaison. */
 data class PayslipCounts(val dejeuners: Int, val diners: Int, val decouchers: Int, val petitsDejeuners: Int)
 
 object EmployerExpenses {
-    fun compute(analysis: Analysis, nights: List<Night>, rates: List<Rates>, zone: ZoneId, markupPercent: Double): List<EmployerDay> =
-        analysis.shifts.mapNotNull { s ->
-            val date = s.start.atZone(zone).toLocalDate()
-            val r = Expenses.ratesAt(rates, date) ?: return@mapNotNull null
-            val after = s.restAfter
-            val night = nights.firstOrNull { it.rest == after }
-            // Retour pour le repos hebdomadaire (au domicile, ou à préciser) : pas de découcher.
-            val weeklyHome = after != null && after.isWeekly && night?.status != NightStatus.AWAY
-            EmployerDay(date, s, EmployerRates.from(r, markupPercent), decoucher = after != null && !weeklyHome)
-        }
+    fun compute(
+        analysis: Analysis,
+        nights: List<Night>,
+        rates: List<Rates>,
+        zone: ZoneId,
+        markupPercent: Double,
+        overrides: Map<LocalDate, DayOverride> = emptyMap(),
+    ): List<EmployerDay> = analysis.shifts.mapNotNull { s ->
+        val date = s.start.atZone(zone).toLocalDate()
+        val r = Expenses.ratesAt(rates, date) ?: return@mapNotNull null
+        val after = s.restAfter
+        val night = nights.firstOrNull { it.rest == after }
+        // Retour pour le repos hebdomadaire (au domicile, ou à préciser) : pas de découcher.
+        val weeklyHome = after != null && after.isWeekly && night?.status != NightStatus.AWAY
+        val auto = after != null && !weeklyHome
+        val o = overrides[date]
+        EmployerDay(
+            date = date,
+            shift = s,
+            rates = EmployerRates.from(r, markupPercent),
+            dejeuner = o?.dejeuner ?: true,
+            diner = o?.diner ?: true,
+            petitDejeuner = o?.petitDejeuner ?: true,
+            decoucher = o?.decoucher ?: auto,
+            autoDecoucher = auto,
+            edited = o != null && !o.isEmpty,
+        )
+    }
 
     fun months(days: List<EmployerDay>): List<EmployerMonth> =
         days.groupBy { YearMonth.from(it.date) }.map { (m, l) -> EmployerMonth(m, l) }.sortedByDescending { it.month }

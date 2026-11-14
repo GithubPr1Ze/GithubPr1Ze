@@ -90,7 +90,7 @@ private fun ChoiceButton(label: String, selected: Boolean, onClick: () -> Unit) 
 
 /** Tableau de bord : découchés du mois et domicile retenu. */
 @Composable
-fun NightsSummaryPanel(history: DriverHistory, lastDate: LocalDate, onSetHome: (GeoPoint?) -> Unit) {
+fun NightsSummaryPanel(history: DriverHistory, lastDate: LocalDate, onSetHome: (GeoPoint?) -> Unit, onOpenClarify: () -> Unit = {}) {
     var choose by remember { mutableStateOf(false) }
     val names = LocalPlaceNames.current
     val months = history.nightMonths
@@ -100,7 +100,12 @@ fun NightsSummaryPanel(history: DriverHistory, lastDate: LocalDate, onSetHome: (
         Row(Modifier.fillMaxWidth()) {
             Metric("Ce mois-ci", "${current?.away ?: 0}", Modifier.weight(1f))
             Metric("Mois dernier", "${previous?.away ?: 0}", Modifier.weight(1f))
-            Metric("À préciser", "${history.nights.count { it.status == null }}", Modifier.weight(1f))
+            Metric(
+                "À préciser ›",
+                "${history.nights.count { it.status == null }}",
+                Modifier.weight(1f).clickable(onClick = onOpenClarify),
+                color = if (history.nights.any { it.status == null }) MaterialTheme.colorScheme.primary else null,
+            )
         }
         Column {
             months.take(4).forEachIndexed { i, m ->

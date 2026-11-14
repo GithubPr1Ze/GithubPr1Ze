@@ -39,6 +39,8 @@ fun DashboardTab(
     rates: List<fr.tachoperso.core.rules.Rates> = emptyList(),
     pay: fr.tachoperso.app.PaySettings = fr.tachoperso.app.PaySettings(),
     onOpenPay: () -> Unit = {},
+    dayOverrides: Map<LocalDate, fr.tachoperso.core.rules.DayOverride> = emptyMap(),
+    onOpenClarify: () -> Unit = {},
 ) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
@@ -76,7 +78,7 @@ fun DashboardTab(
         }
 
         if (rates.isNotEmpty()) {
-            item { PaySummaryPanel(history, rates, pay, lastDate, onOpenPay) }
+            item { PaySummaryPanel(history, rates, pay, dayOverrides, lastDate, onOpenPay, onOpenClarify) }
         }
 
         if (expenses.isNotEmpty()) {
@@ -86,7 +88,7 @@ fun DashboardTab(
         item { PdfPanel(history, onExportPdf) }
 
         if (history.nights.isNotEmpty()) {
-            item { NightsSummaryPanel(history, lastDate, onSetHome) }
+            item { NightsSummaryPanel(history, lastDate, onSetHome, onOpenClarify) }
         }
 
         if (history.ferry.isNotEmpty()) {

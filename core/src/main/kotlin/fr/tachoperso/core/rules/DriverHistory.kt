@@ -133,8 +133,11 @@ class DriverHistory(
 
 
     /** Frais selon la pratique de l'employeur (voir [EmployerExpenses]). */
-    fun employerExpenses(rates: List<Rates>, markupPercent: Double): List<EmployerDay> =
-        EmployerExpenses.compute(analysis, nights, rates, zone, markupPercent)
+    fun employerExpenses(rates: List<Rates>, markupPercent: Double, overrides: Map<LocalDate, DayOverride> = emptyMap()): List<EmployerDay> =
+        EmployerExpenses.compute(analysis, nights, rates, zone, markupPercent, overrides)
+
+    /** Repos dont le statut domicile / découché reste à préciser, du plus récent au plus ancien. */
+    val nightsToClarify: List<Night> get() = nights.filter { it.status == null }.sortedByDescending { it.rest.start }
 
     /** Temps de service (minutes) des jours du mois, heure de Paris. */
     fun monthService(month: java.time.YearMonth): Long =

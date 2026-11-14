@@ -121,4 +121,19 @@ class ScreenshotTest {
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.PayScreen(h, rates, PaySettings(), slips, false, {}, { _, _ -> }) } } }
         shot("9-paye")
     }
+
+    @Test
+    fun clarify() {
+        val (_, h) = history()
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.ClarifyScreen(h, { _, _ -> }, {}) } } }
+        shot("10-a-preciser")
+    }
+
+    @Test
+    fun monthEditor() {
+        val (_, h) = history()
+        val o = mapOf(java.time.LocalDate.of(2026, 10, 2) to fr.tachoperso.core.rules.DayOverride(diner = false))
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.MonthDaysEditor(h, rates, 18.0, o, java.time.YearMonth.of(2026, 10), { _, _ -> }, {}) } } }
+        shot("11-editeur-mois")
+    }
 }
