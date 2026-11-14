@@ -79,6 +79,22 @@ fun MainScreen(vm: MainViewModel) {
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) vm.exportDdd(uri)
     }
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) vm.exportBackup(uri)
+    }
+    var confirmRestore by remember { mutableStateOf<android.net.Uri?>(null) }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) confirmRestore = uri
+    }
+    confirmRestore?.let { uri ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmRestore = null },
+            title = { Text("Restaurer la sauvegarde ?") },
+            text = { Text("Les données actuelles de l'application seront remplacées par celles de la sauvegarde.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.importBackup(uri); confirmRestore = null }) { Text("Restaurer") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmRestore = null }) { Text("Annuler") } },
+        )
+    }
     var pdfMonth by remember { mutableStateOf<java.time.YearMonth?>(null) }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         val m = pdfMonth
@@ -152,6 +168,13 @@ fun MainScreen(vm: MainViewModel) {
                                     enabled = state.selected != null,
                                     onClick = { menu = false; vm.editEmail() },
                                 )
+                                DropdownMenuItem(text = { Text("Sauvegarde complète…") }, onClick = {
+                                    menu = false
+                                    backupLauncher.launch("TachoPerso_sauvegarde_${java.time.LocalDate.now()}.zip")
+                                })
+                                DropdownMenuItem(text = { Text("Restaurer une sauvegarde…") }, onClick = {
+                                    menu = false; restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                                })
                                 DropdownMenuItem(text = { Text("Journal technique") }, onClick = { menu = false; showLog = true })
                             }
                         }

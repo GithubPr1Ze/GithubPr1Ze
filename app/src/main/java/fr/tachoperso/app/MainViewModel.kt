@@ -278,6 +278,40 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sauvegarde complète (lectures, réglages, corrections) dans un .zip choisi par l'utilisateur. */
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val app = getApplication<Application>()
+                    app.contentResolver.openOutputStream(uri)?.use { Backup.write(app.filesDir, it) }
+                        ?: throw CardException("Impossible d'écrire le fichier")
+                }
+                _state.update { it.copy(status = "Sauvegarde enregistrée.") }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Sauvegarde impossible : ${e.message}") }
+            }
+        }
+    }
+
+    /** Restaure une sauvegarde complète (remplace les données actuelles). */
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val n = withContext(Dispatchers.IO) {
+                    val app = getApplication<Application>()
+                    app.contentResolver.openInputStream(uri)?.use { Backup.restore(app.filesDir, it) }
+                        ?: throw CardException("Impossible d'ouvrir le fichier")
+                }
+                val drivers = withContext(Dispatchers.IO) { repo.drivers() }
+                _state.update { it.copy(drivers = drivers, status = "Sauvegarde restaurée ($n fichiers).") }
+                drivers.firstOrNull()?.let { select(it.key) }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Restauration impossible : ${e.message}") }
+            }
+        }
+    }
+
     /** Dernière lecture du conducteur affiché, à exporter. */
     fun latestRead(): File? = _state.value.selected?.let { repo.reads(it.key).firstOrNull() }
 

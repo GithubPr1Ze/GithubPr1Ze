@@ -1,9 +1,19 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Clé de publication privée : chemin donné par « tachoperso.signing » dans local.properties
+// (jamais versionné), pointant vers un fichier storeFile / storePassword / keyAlias / keyPassword.
+val signingProps: Properties? = Properties().apply {
+    val local = rootProject.file("local.properties")
+    if (local.isFile) local.inputStream().use { load(it) }
+}.getProperty("tachoperso.signing")?.let { path ->
+    Properties().apply { file(path).inputStream().use { load(it) } }
 }
 
 android {
@@ -14,25 +24,32 @@ android {
         applicationId = "fr.tachoperso.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.8.0"
+        versionCode = 13
+        versionName = "0.8.1"
     }
 
     signingConfigs {
-        // Clé fixe versionnée : chaque APK compilé par GitHub Actions peut mettre à jour le précédent
-        // sans désinstallation (et donc sans perdre l'historique des lectures).
+        // Clé de test versionnée : builds de développement et GitHub Actions uniquement.
         getByName("debug") {
             storeFile = file("debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        if (signingProps != null) {
+            create("release") {
+                storeFile = file(signingProps.getProperty("storeFile"))
+                storePassword = signingProps.getProperty("storePassword")
+                keyAlias = signingProps.getProperty("keyAlias")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

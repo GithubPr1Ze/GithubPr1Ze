@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -28,24 +28,7 @@ jobs:
       - name: Compilation de l'APK
         run: ./gradlew :app:assembleDebug --console=plain
 
-      - name: Renommer l'APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk TachoPerso-${{ github.run_number }}.apk
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TachoPerso-apk
-          path: TachoPerso-${{ github.run_number }}.apk
-
-      # Publication en « pré-version » pour télécharger l'APK directement depuis le téléphone.
-      - name: Publier l'APK
-        if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk-${{ github.run_number }}
-          name: Tacho Perso (build ${{ github.run_number }})
-          target_commitish: ${{ github.sha }}
-          prerelease: true
-          body: |
-            APK de test compilé depuis `${{ github.ref_name }}` (${{ github.sha }}).
-            Téléchargez `TachoPerso-${{ github.run_number }}.apk` sur le téléphone et installez-le.
-          files: TachoPerso-${{ github.run_number }}.apk
+      # Vérification seulement : les APK à installer sont signés localement avec la clé privée
+      # (un APK signé avec la clé de test ne peut pas mettre à jour l'application installée).
+      - name: Tests de l'application
+        run: ./gradlew :app:testDebugUnitTest --console=plain
