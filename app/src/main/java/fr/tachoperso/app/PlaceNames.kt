@@ -20,7 +20,10 @@ import java.util.Locale
  * (arrondi à ~100 m). Sans réseau, rien n'est mis en cache et l'appli affiche les coordonnées.
  */
 class PlaceNames(context: Context) {
-    private val file = File(context.filesDir, "place-names.json")
+    // « -4 » : les noms de l'ancien cache pouvaient se limiter au comté (« Essex ») au lieu de la ville.
+    private val file = File(context.filesDir, "place-names-4.json").also { _ ->
+        listOf("place-names.json", "place-names-2.json", "place-names-3.json").forEach { File(context.filesDir, it).delete() }
+    }
     private val geocoder = if (Geocoder.isPresent()) Geocoder(context, Locale.FRANCE) else null
     private val mutex = Mutex()
     private val cache: MutableMap<String, String> = load()
@@ -36,10 +39,7 @@ class PlaceNames(context: Context) {
             cached(p) ?: withContext(Dispatchers.IO) {
                 val name = try {
                     @Suppress("DEPRECATION")
-                    g.getFromLocation(p.latitude, p.longitude, 1)?.firstOrNull()?.let { a ->
-                        val place = a.locality ?: a.subLocality ?: a.subAdminArea ?: a.adminArea
-                        place?.let { "$it (${a.countryCode ?: "?"})" }
-                    }
+                    g.getFromLocation(p.latitude, p.longitude, 5)?.let(::bestName)
                 } catch (_: Exception) {
                     null
                 }
@@ -50,6 +50,31 @@ class PlaceNames(context: Context) {
                 name
             }
         }
+    }
+
+    /**
+     * Le premier résultat est souvent une adresse sans ville (Royaume-Uni notamment) : on prend
+     * la ville du premier résultat qui en donne une (champ dédié, sinon adresse), puis seulement le
+     * quartier, le district, la région.
+     */
+    private fun bestName(results: List<android.location.Address>): String? {
+        val levels = listOf<(android.location.Address) -> String?>({ it.locality }, ::townFromLine, { it.subLocality }, { it.subAdminArea }, { it.adminArea })
+        for (level in levels) {
+            val a = results.firstOrNull { !level(it).isNullOrBlank() } ?: continue
+            val country = a.countryCode ?: results.firstNotNullOfOrNull { it.countryCode } ?: "?"
+            return "${level(a)} ($country)"
+        }
+        return null
+    }
+
+    /**
+     * Au Royaume-Uni le champ « ville » est vide, mais elle précède le code postal dans l'adresse
+     * (« 1 High St, Witham CM8 3DX, Royaume-Uni » → « Witham »).
+     */
+    private fun townFromLine(a: android.location.Address): String? {
+        val code = a.postalCode?.ifBlank { null } ?: return null
+        val part = a.getAddressLine(0)?.split(",")?.map { it.trim() }?.firstOrNull { code in it } ?: return null
+        return part.replace(code, "").trim().ifBlank { null }
     }
 
     private fun load(): MutableMap<String, String> = try {

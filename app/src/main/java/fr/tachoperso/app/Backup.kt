@@ -14,7 +14,7 @@ import java.util.zip.ZipOutputStream
  */
 object Backup {
     private const val MARKER = "tachoperso-backup.txt"
-    private val ROOTS = listOf("drivers", "place-names.json")
+    private val ROOTS = listOf("drivers", "place-names.json", "place-names-4.json")
 
     fun write(filesDir: File, out: OutputStream) {
         ZipOutputStream(out).use { zip ->
