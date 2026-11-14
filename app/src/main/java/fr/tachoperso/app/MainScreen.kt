@@ -96,9 +96,37 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
     var pdfMonth by remember { mutableStateOf<java.time.YearMonth?>(null) }
+    var pdfChoice by remember { mutableStateOf<java.time.YearMonth?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        vm.launches.collect { i ->
+            runCatching { context.startActivity(i) }.onFailure { vm.reportError("Aucune messagerie disponible sur le téléphone") }
+        }
+    }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         val m = pdfMonth
         if (uri != null && m != null) vm.exportPdf(uri, m)
+    }
+
+    pdfChoice?.let { m ->
+        AlertDialog(
+            onDismissRequest = { pdfChoice = null },
+            title = { Text("Récapitulatif ${MonthlyMail.monthLabel(m)}") },
+            text = {
+                val incomplete = MonthlyMail.incomplete(state.selected?.lastRead, m)
+                Text(
+                    (if (incomplete) "Attention : la carte n'a pas été lue depuis la fin de ce mois, les derniers jours manqueront. " +
+                        "Lisez d'abord la carte pour un récapitulatif complet.\n\n" else "") +
+                        "Envoyer le PDF par e-mail (avec la dernière lecture .DDD), ou l'enregistrer sur le téléphone ?",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { state.selected?.let { vm.sendMonthly(it.key, m) }; pdfChoice = null }) { Text("Envoyer par e-mail") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pdfMonth = m; pdfChoice = null; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }) { Text("Enregistrer") }
+            },
+        )
     }
 
     LaunchedEffect(state.status, state.error) {
@@ -240,7 +268,7 @@ fun MainScreen(vm: MainViewModel) {
                 )
                 state.openExpenses -> ExpensesScreen(expenses, state.bareme, state.abroadMarkup, vm::setAbroadMarkup, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }, rates, state.pay, { vm.openPay(true) }, state.dayOverrides, vm::openClarify, state.vehicleCompany, vm::openVehicles)
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfChoice = m }, rates, state.pay, { vm.openPay(true) }, state.dayOverrides, vm::openClarify, state.vehicleCompany, vm::openVehicles)
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

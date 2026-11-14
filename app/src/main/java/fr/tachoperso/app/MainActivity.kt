@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
         ) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
+        handleMail(intent)
         val placeNames = PlaceNames(applicationContext)
         setContent {
             fr.tachoperso.app.ui.TachoTheme {
@@ -31,7 +32,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleMail(intent)
         viewModel.refreshReader() // lecteur branché pendant que l'application est ouverte
+    }
+
+    /** Notification « récapitulatif prêt » : ouvre directement la messagerie. */
+    private fun handleMail(intent: Intent?) {
+        val key = intent?.getStringExtra(MonthlyMail.EXTRA_DRIVER) ?: return
+        val month = intent.getStringExtra(MonthlyMail.EXTRA_MONTH)?.let { runCatching { java.time.YearMonth.parse(it) }.getOrNull() } ?: return
+        intent.removeExtra(MonthlyMail.EXTRA_DRIVER)
+        viewModel.sendMonthly(key, month)
     }
 
     override fun onResume() {

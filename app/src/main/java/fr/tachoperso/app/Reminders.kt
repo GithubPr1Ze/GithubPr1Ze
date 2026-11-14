@@ -76,8 +76,33 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val prefs = ctx.getSharedPreferences("reminders", Context.MODE_PRIVATE)
         val done = prefs.getStringSet("notified", emptySet())!!.toMutableSet()
         val repo = DriverRepository(ctx.filesDir)
-        repo.drivers().flatMap { Reminders.due(it) }.filter { it.key !in done }.forEach { r ->
+        val drivers = repo.drivers()
+        drivers.flatMap { Reminders.due(it) }.filter { it.key !in done }.forEach { r ->
             if (notify(ctx, r)) done += r.key
+        }
+        // Récapitulatif du mois écoulé : une notification par mois, l'envoi se fait d'un appui.
+        drivers.forEach { p ->
+            MonthlyMail.readFirstMonth(p.lastRead)?.let { m ->
+                val r = Reminder(
+                    "${p.key}:mail-read-$m",
+                    "Lisez votre carte pour le récapitulatif",
+                    "Le récapitulatif de ${MonthlyMail.monthLabel(m)} sera prêt à envoyer après une lecture de la carte : " +
+                        "les derniers jours du mois n'ont pas encore été lus.",
+                    urgent = false,
+                )
+                if (r.key !in done && notify(ctx, r)) done += r.key
+            }
+            val m = MonthlyMail.dueMonth(p.lastRead) ?: return@forEach
+            val r = Reminder(
+                "${p.key}:mail-$m",
+                "Récapitulatif de ${MonthlyMail.monthLabel(m)} prêt",
+                "Appuyez pour l'envoyer par e-mail" + (if (p.email.isNotBlank()) " à ${p.email}" else "") +
+                    " : PDF du mois et dernière lecture de la carte.",
+                urgent = false,
+            )
+            if (r.key !in done && notify(ctx, r) { putExtra(MonthlyMail.EXTRA_DRIVER, p.key); putExtra(MonthlyMail.EXTRA_MONTH, m.toString()) }) {
+                done += r.key
+            }
         }
         prefs.edit().putStringSet("notified", done).apply()
         return Result.success()
@@ -91,7 +116,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
             WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("rappels", ExistingPeriodicWorkPolicy.KEEP, req)
         }
 
-        private fun notify(ctx: Context, r: Reminder): Boolean {
+        private fun notify(ctx: Context, r: Reminder, extras: Intent.() -> Unit = {}): Boolean {
             if (Build.VERSION.SDK_INT >= 33 &&
                 ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
@@ -102,8 +127,8 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 nm.createNotificationChannel(NotificationChannel(CHANNEL, "Rappels carte conducteur", NotificationManager.IMPORTANCE_DEFAULT))
             }
             val open = PendingIntent.getActivity(
-                ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                PendingIntent.FLAG_IMMUTABLE,
+                ctx, r.key.hashCode(), Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).apply(extras),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             val n = NotificationCompat.Builder(ctx, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)

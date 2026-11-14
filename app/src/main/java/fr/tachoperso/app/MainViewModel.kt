@@ -65,6 +65,24 @@ data class UiState(
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(UiState())
+
+    /** Écrans d'autres applications à ouvrir (messagerie pour le récapitulatif). */
+    private val _launches = kotlinx.coroutines.flow.MutableSharedFlow<android.content.Intent>(extraBufferCapacity = 1)
+    val launches: kotlinx.coroutines.flow.SharedFlow<android.content.Intent> = _launches
+
+    fun reportError(msg: String) = _state.update { it.copy(error = msg) }
+
+    /** Prépare l'e-mail du récapitulatif [month] (PDF + dernière lecture) pour le conducteur [key]. */
+    fun sendMonthly(key: String, month: java.time.YearMonth) {
+        viewModelScope.launch {
+            try {
+                val i = withContext(Dispatchers.IO) { MonthlyMail.intent(getApplication(), key, month) }
+                _launches.emit(i)
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "Préparation de l'e-mail impossible : ${e.message}") }
+            }
+        }
+    }
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private val usb = app.getSystemService(Context.USB_SERVICE) as UsbManager
