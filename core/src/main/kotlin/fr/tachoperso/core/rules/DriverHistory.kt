@@ -11,7 +11,6 @@ import fr.tachoperso.core.tacho.SpecificCondition
 import fr.tachoperso.core.tacho.SpecificConditionsParser
 import java.time.Instant
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneId
 
 /**
@@ -74,18 +73,18 @@ class DriverHistory(
     /** Traversées ferry/train, de la plus ancienne à la plus récente. */
     val crossings: List<Crossing> = SpecificConditionsParser.crossings(specificConditions)
 
-    fun crossingsOn(date: LocalDate): List<Crossing> =
-        crossings.filter { it.start.atZone(zone).toLocalDate() == date }
+    /** Traversées avec durée mesurée ou estimée et temps passé en repos. */
+    val ferry: List<FerryCrossing> = Ferry.build(crossings, timeline)
+
+    fun ferryOn(date: LocalDate): List<FerryCrossing> =
+        ferry.filter { it.from.atZone(zone).toLocalDate() == date }
 
     /** Traversées commencées entre [from] et [to] inclus (dates de Paris). */
-    fun crossingsBetween(from: LocalDate, to: LocalDate): List<Crossing> =
-        crossings.filter { val d = it.start.atZone(zone).toLocalDate(); !d.isBefore(from) && !d.isAfter(to) }
+    fun ferryBetween(from: LocalDate, to: LocalDate): List<FerryCrossing> =
+        ferry.filter { val d = it.from.atZone(zone).toLocalDate(); !d.isBefore(from) && !d.isAfter(to) }
 
-    /** Récapitulatif mensuel des traversées, du mois le plus récent au plus ancien. */
-    val crossingMonths: List<CrossingMonth> = crossings
-        .groupBy { YearMonth.from(it.start.atZone(zone)) }
-        .map { (m, l) -> CrossingMonth(m, l.size, l.count { !it.measured }, l.sumOf { it.minutes }) }
-        .sortedByDescending { it.month }
+    /** Synthèse mensuelle, du mois le plus récent au plus ancien. */
+    val ferryMonths: List<FerryMonth> = Ferry.months(ferry, zone)
 
     /** Pays de début et de fin des lieux saisis ce jour-là (ex. « F → D »), null si aucun. */
     fun countriesOn(date: LocalDate): String? {
@@ -108,6 +107,3 @@ data class LocationEvent(
     val accuracyM: Int?,
     val odometerKm: Int,
 )
-
-/** Traversées d'un mois : nombre, dont durée non enregistrée, et temps total. */
-data class CrossingMonth(val month: YearMonth, val count: Int, val unmeasured: Int, val minutes: Long)

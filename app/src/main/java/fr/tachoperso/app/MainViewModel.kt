@@ -40,6 +40,8 @@ data class UiState(
     val loadingHistory: Boolean = false,
     val tab: Tab = Tab.DASHBOARD,
     val openDay: LocalDate? = null,
+    /** Écran « Ferry / train » (synthèse mensuelle) ouvert. */
+    val openFerry: Boolean = false,
     val emailPrompt: EmailPrompt? = null,
 )
 
@@ -79,17 +81,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTab(tab: Tab) {
         prefs.edit().putString("tab", tab.name).apply()
-        _state.update { it.copy(tab = tab, openDay = null) }
+        _state.update { it.copy(tab = tab, openDay = null, openFerry = false) }
     }
 
     fun openDay(date: LocalDate?) = _state.update { it.copy(openDay = date) }
+
+    fun openFerry(open: Boolean) = _state.update { it.copy(openFerry = open, openDay = null) }
+
+    /** Retour : ferme le jour ouvert, sinon l'écran ferry. */
+    fun back() = _state.update { if (it.openDay != null) it.copy(openDay = null) else it.copy(openFerry = false) }
 
     fun dismissMessage() = _state.update { it.copy(error = null, status = null) }
 
     fun select(key: String) {
         prefs.edit().putString("driver", key).apply()
         viewModelScope.launch {
-            _state.update { s -> s.copy(selected = s.drivers.firstOrNull { it.key == key }, loadingHistory = true, openDay = null) }
+            _state.update { s -> s.copy(selected = s.drivers.firstOrNull { it.key == key }, loadingHistory = true, openDay = null, openFerry = false) }
             val history = withContext(Dispatchers.Default) { runCatching { repo.history(key) }.getOrNull() }
             _state.update { it.copy(history = history, loadingHistory = false) }
         }

@@ -26,7 +26,13 @@ import java.time.LocalDate
 import java.util.Locale
 
 @Composable
-fun DashboardTab(profile: DriverProfile, history: DriverHistory, onOpenDay: (LocalDate) -> Unit, onEditEmail: () -> Unit) {
+fun DashboardTab(
+    profile: DriverProfile,
+    history: DriverHistory,
+    onOpenDay: (LocalDate) -> Unit,
+    onEditEmail: () -> Unit,
+    onOpenFerry: () -> Unit = {},
+) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
     val monday = a.monday(lastDate)
@@ -57,8 +63,8 @@ fun DashboardTab(profile: DriverProfile, history: DriverHistory, onOpenDay: (Loc
             }
         }
 
-        if (history.crossings.isNotEmpty()) {
-            item { CrossingsPanel(history, monday, sunday, lastDate) }
+        if (history.ferry.isNotEmpty()) {
+            item { CrossingsPanel(history, monday, sunday, lastDate, onOpenFerry) }
         }
 
         if (lastShift != null) {
@@ -177,12 +183,12 @@ private fun DriverPanel(profile: DriverProfile, history: DriverHistory, onEditEm
 }
 
 
-/** Temps passé en mode ferry/train : semaine, mois, total et détail par mois. */
+/** Temps passé en mode ferry/train : semaine, mois, total et synthèse par mois. */
 @Composable
-private fun CrossingsPanel(history: DriverHistory, monday: LocalDate, sunday: LocalDate, lastDate: LocalDate) {
-    val all = history.crossings
-    val week = history.crossingsBetween(monday, sunday)
-    val month = history.crossingsBetween(lastDate.withDayOfMonth(1), lastDate)
+private fun CrossingsPanel(history: DriverHistory, monday: LocalDate, sunday: LocalDate, lastDate: LocalDate, onOpen: () -> Unit) {
+    val all = history.ferry
+    val week = history.ferryBetween(monday, sunday)
+    val month = history.ferryBetween(lastDate.withDayOfMonth(1), lastDate)
     Panel(title = "Ferry / train") {
         Row(Modifier.fillMaxWidth()) {
             Metric("Cette semaine", hm(week.sumOf { it.minutes }), Modifier.weight(1f))
@@ -190,29 +196,12 @@ private fun CrossingsPanel(history: DriverHistory, monday: LocalDate, sunday: Lo
             Metric("Total", hm(all.sumOf { it.minutes }), Modifier.weight(1f))
         }
         Text(
-            "${all.size} traversée(s) depuis le ${dateFmt.format(all.first().start.atZone(ZONE))}",
+            "${all.size} traversée(s) depuis le ${dateFmt.format(all.first().from.atZone(ZONE))}, " +
+                "dont ${hm(all.sumOf { it.restMinutes })} enregistrées en repos (hors temps de service).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Column {
-            history.crossingMonths.take(6).forEachIndexed { i, m ->
-                if (i > 0) Divider()
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                    Text(monthFmt.format(m.month).replaceFirstChar { it.titlecase(Locale.FRANCE) },
-                        style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Text("${m.count} trav.", style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(72.dp))
-                    Text(hm(m.minutes), style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers))
-                }
-            }
-        }
-        val unmeasured = all.count { !it.measured }
-        if (unmeasured > 0) {
-            Text(
-                "$unmeasured traversée(s) sans durée enregistrée (début et fin à la même minute) : non comptées dans les totaux.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        FerryMonthTable(history.ferryMonths.take(4))
+        TextButton(onClick = onOpen, contentPadding = PaddingValues(0.dp)) { Text("Synthèse mensuelle détaillée") }
     }
 }

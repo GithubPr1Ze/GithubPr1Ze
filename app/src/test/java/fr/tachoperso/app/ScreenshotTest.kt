@@ -72,8 +72,15 @@ class ScreenshotTest {
     @Test
     fun dayLocations() {
         val (_, h) = history()
-        val date = h.localDays.map { it.date }.last { h.crossingsOn(it).size >= 2 && h.locationsOn(it).size >= 2 }
+        val date = h.localDays.map { it.date }.last { h.ferryOn(it).size >= 2 && h.locationsOn(it).size >= 2 }
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DayDetail(h, date) } } }
         shot("5-detail-jour-positions")
+    }
+
+    @Test
+    fun ferry() {
+        val (_, h) = history()
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.FerryScreen(h) {} } } }
+        shot("6-ferry")
     }
 }

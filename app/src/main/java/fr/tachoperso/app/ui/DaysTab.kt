@@ -31,7 +31,6 @@ import fr.tachoperso.core.rules.LocationKind
 import fr.tachoperso.core.rules.Severity
 import fr.tachoperso.core.rules.hm
 import fr.tachoperso.core.tacho.ActivityType
-import fr.tachoperso.core.tacho.Crossing
 import fr.tachoperso.core.tacho.GeoPoint
 import java.time.LocalDate
 import java.util.Locale
@@ -99,16 +98,17 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
                 }
             }
         }
-        val crossings = history.crossingsOn(date)
+        val crossings = history.ferryOn(date)
         if (crossings.isNotEmpty()) {
             item {
                 Panel(title = "Ferry / train") {
                     Column {
                         crossings.forEachIndexed { i, c ->
                             if (i > 0) Divider()
-                            CrossingRow(c)
+                            FerryRow(c, showDate = false)
                         }
                     }
+                    if (crossings.any { it.estimated }) FerryAdvice()
                 }
             }
         }
@@ -248,22 +248,5 @@ private fun openMap(open: (String) -> Unit, p: GeoPoint, label: String) {
             open("https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=15/$lat/$lon")
         } catch (_: Exception) {
         }
-    }
-}
-
-@Composable
-fun CrossingRow(c: Crossing, showDate: Boolean = false) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            (if (showDate) "${c.start.local()}" else c.start.localTime()) +
-                (c.end?.takeIf { c.measured }?.let { " – ${it.localTime()}" } ?: ""),
-            style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            if (c.measured) hm(c.minutes) else "durée non enregistrée",
-            style = if (c.measured) MaterialTheme.typography.bodyMedium.merge(TabularNumbers) else MaterialTheme.typography.bodySmall,
-            color = if (c.measured) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }

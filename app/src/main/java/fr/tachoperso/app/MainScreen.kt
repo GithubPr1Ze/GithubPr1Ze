@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.tachoperso.app.ui.CalendarTab
 import fr.tachoperso.app.ui.DashboardTab
 import fr.tachoperso.app.ui.DayDetail
+import fr.tachoperso.app.ui.FerryScreen
 import fr.tachoperso.app.ui.DaysTab
 import fr.tachoperso.app.ui.Panel
 
@@ -86,7 +87,8 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    BackHandler(enabled = state.openDay != null) { vm.openDay(null) }
+    val inDetail = state.openDay != null || state.openFerry
+    BackHandler(enabled = inDetail) { vm.back() }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -95,8 +97,8 @@ fun MainScreen(vm: MainViewModel) {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                     navigationIcon = {
-                        if (state.openDay != null) {
-                            IconButton(onClick = { vm.openDay(null) }) {
+                        if (inDetail) {
+                            IconButton(onClick = { vm.back() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                             }
                         }
@@ -160,7 +162,7 @@ fun MainScreen(vm: MainViewModel) {
             }
         },
         bottomBar = {
-            if (state.history != null && state.openDay == null) {
+            if (state.history != null && !inDetail) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     Tab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -191,8 +193,9 @@ fun MainScreen(vm: MainViewModel) {
                 state.loadingHistory -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 history == null || profile == null -> EmptyState(state, vm::readCard)
                 state.openDay != null -> DayDetail(history, state.openDay!!)
+                state.openFerry -> FerryScreen(history, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail)
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail) { vm.openFerry(true) }
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

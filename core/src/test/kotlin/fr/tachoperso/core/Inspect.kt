@@ -28,6 +28,7 @@ fun main(args: Array<String>) {
     println("  Précisions (m) : " + h.locations.mapNotNull { it.accuracyM }.groupingBy { it }.eachCount().toSortedMap())
     println("Dernières localisations :")
     h.locations.takeLast(10).forEach { println("  ${it.time.atZone(a.zone).toLocalDateTime()} ${it.label} ${it.country ?: ""} ${it.point?.label() ?: "sans position"} ${it.odometerKm} km") }
-    println("Traversées ferry/train : ${h.crossings.size}, total ${hm(h.crossings.sumOf { it.minutes })}, sans durée ${h.crossings.count { !it.measured }}")
-    h.crossingMonths.forEach { println("  ${it.month} : ${it.count} traversées, ${hm(it.minutes)}, sans durée ${it.unmeasured}") }
+    println("Traversées ferry/train : ${h.ferry.size}, total ${hm(h.ferry.sumOf { it.minutes })}, en repos ${hm(h.ferry.sumOf { it.restMinutes })}, estimées ${h.ferry.count { it.estimated }}, inconnues ${h.ferry.count { !it.known }}")
+    h.ferryMonths.forEach { m -> println("  ${m.month} : ${m.count} trav., ${hm(m.minutes)} dont repos ${hm(m.restMinutes)}, estimées ${m.estimatedCount} (${hm(m.estimatedMinutes)}), inconnues ${m.unknownCount}") }
+    h.ferry.filter { it.estimated || !it.known }.forEach { println("    ${it.from.atZone(a.zone).toLocalDateTime()} → ${it.to?.atZone(a.zone)?.toLocalTime()} ${hm(it.minutes)} coupé après ${it.cutAfterSeconds} s") }
 }
