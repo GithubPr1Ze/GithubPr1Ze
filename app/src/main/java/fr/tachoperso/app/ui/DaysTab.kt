@@ -250,7 +250,7 @@ private fun LocationRow(l: LocationEvent) {
 }
 
 /** Ouvre l'application de cartes du téléphone ; à défaut, OpenStreetMap dans le navigateur. */
-private fun openMap(open: (String) -> Unit, p: GeoPoint, label: String) {
+internal fun openMap(open: (String) -> Unit, p: GeoPoint, label: String) {
     val lat = "%.5f".format(Locale.US, p.latitude)
     val lon = "%.5f".format(Locale.US, p.longitude)
     try {

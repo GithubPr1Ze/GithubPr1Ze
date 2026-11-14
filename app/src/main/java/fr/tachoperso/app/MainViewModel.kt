@@ -23,7 +23,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-enum class Tab(val label: String) { DASHBOARD("Tableau de bord"), CALENDAR("Calendrier"), DAYS("Jours") }
+enum class Tab(val label: String) { DASHBOARD("Tableau de bord"), CALENDAR("Calendrier"), DAYS("Jours"), PLACES("Lieux") }
 
 /** Demande d'email affichée après une lecture de carte. */
 data class EmailPrompt(val profile: DriverProfile, val newDriver: Boolean)

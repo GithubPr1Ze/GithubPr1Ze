@@ -24,8 +24,8 @@ android {
         applicationId = "fr.tachoperso.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.9.1"
+        versionCode = 16
+        versionName = "0.10.0"
     }
 
     signingConfigs {
@@ -94,6 +94,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Carte OpenStreetMap, sans clé ni compte (bibliothèque archivée fin 2024, isolée dans ui/StopsMap.kt).
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")

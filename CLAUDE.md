@@ -36,7 +36,7 @@ export JAVA_HOME=$(ls -d ../dev-tools/jdk-17* | head -1)
   GNSS), `SpecificConditions` (ferry/train), `Vehicles` (véhicules utilisés, VIN), `CardReport` (vue lisible).
 - `rules/` : `Timeline`/`Analysis` (RSE, conduite, service, nuit), **`DriverHistory`** (point d'entrée :
   fusionne les lectures, lieux, nuits, ferry, véhicules, frais), `Nights` (domicile/découché, lieu du repos),
-  `Ferry`, `Expenses` (protocole 1974, avenant 81), `EmployerExpenses` (mode employeur ×1,18 + corrections
+  `Stops` (lieux de coupure regroupés à 2 km), `Ferry`, `Expenses` (protocole 1974, avenant 81), `EmployerExpenses` (mode employeur ×1,18 + corrections
   par jour), `MonthlyReport`.
 - Tests : un fichier par sujet dans `core/src/test/kotlin` ; `FakeTachoCard` simule une carte.
 
@@ -49,11 +49,14 @@ export JAVA_HOME=$(ls -d ../dev-tools/jdk-17* | head -1)
   `Reminders` (WorkManager quotidien : lecture < 28 j, expiration carte, récap mensuel),
   `MonthlyMail` (e-mail prérempli via la messagerie du téléphone, PDF + .DDD, FileProvider),
   `ReportPdf`, `Backup` (.zip complet), `PlaceNames` (géocodage en cache), `UsbReaders`.
-- `ui/` : un fichier par écran ou onglet (Dashboard, Calendar, Days, Ferry, Expenses, Pay, Nights,
-  Edit = repos à préciser/corrections, Vehicles) ; `Components` (Panel, KeyValue…), `Theme`.
+- `ui/` : un fichier par écran ou onglet (Dashboard, Calendar, Days, Places = onglet Lieux, Ferry,
+  Expenses, Pay, Nights, Edit = repos à préciser/corrections, Vehicles) ; `StopsMap` (seul fichier
+  qui touche osmdroid, bibliothèque archivée fin 2024) ; `Components` (Panel, KeyValue…), `Theme`.
 
 ## Restant à faire
-- Onglet graphique : carte OpenStreetMap (osmdroid, pas Google Maps) des points GPS avec liens
-  Google Maps, frise colorée de la journée, jauges de conduite restante (semaine / quinzaine).
+- Lieux de coupure : la carte de référence n'a presque aucun lieu « fin de journée » (la carte reste
+  dans le chrono la nuit ; les « début » sont des saisies de pays après ferry/tunnel). Seules les
+  coupures situées à 2 km près par un point GNSS sont classées (~20 %). À vérifier avec le
+  conducteur : une saisie « pays fin » le soir enregistre-t-elle une position exacte ?
 - Récapitulatifs annuels/trimestriels par société (`DriverHistory.companyOn`).
 - Écart inexpliqué : bulletins = 1 déjeuner et 1 dîner de moins par mois que la carte.

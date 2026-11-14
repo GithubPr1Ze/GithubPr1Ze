@@ -193,9 +193,12 @@ dans l'application.
   WorkManager, nouvel essai si pas de réseau. .DDD bruts joints. Pas de Google Drive.
   - Secours : notification « rapport prêt » → partage Android en un appui.
   - Prérequis : projet Google Cloud, vraie clé de signature de l'APK (dans `secrets`).
-- Onglet graphique (Compose + Material 3, déjà en place) : frise de la journée, jauges de
-  conduite restante semaine/quinzaine, carte des points (OpenStreetMap, sans clé). Thème sombre
-  selon le téléphone, animations discrètes.
+- Onglet « Lieux » (0.10.0, décidé le 14/11/2026 à la place de l'onglet graphique) : pas
+  d'itinéraire journalier. Carte OpenStreetMap (sans clé) avec une pastille par lieu de coupure
+  (repos ≥ 9 h, regroupés à 2 km), classement par fréquentation, historique de toutes les coupures,
+  filtre mois / année / tout, lien Google Maps. Seules les coupures connues à 2 km près sont
+  classées ; les autres restent dans l'historique avec leur marge.
+- Conduite restante (semaine, maximum semaine suivante) : sur le tableau de bord (0.9.1).
 
 ### 3.6 Ordre
 A → B → C → E (rappels + PDF) → D → E (e-mail + graphique). Un APK testable par lot.

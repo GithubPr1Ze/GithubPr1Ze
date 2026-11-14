@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -231,11 +232,12 @@ fun MainScreen(vm: MainViewModel) {
                                         Tab.DASHBOARD -> Icons.Filled.Home
                                         Tab.CALENDAR -> Icons.Filled.DateRange
                                         Tab.DAYS -> Icons.AutoMirrored.Filled.List
+                                        Tab.PLACES -> Icons.Filled.Place
                                     },
                                     contentDescription = null,
                                 )
                             },
-                            label = { Text(tab.label) },
+                            label = { Text(tab.label, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
                         )
                     }
                 }
@@ -271,6 +273,7 @@ fun MainScreen(vm: MainViewModel) {
                     Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfChoice = m }, rates, state.pay, { vm.openPay(true) }, state.dayOverrides, vm::openClarify, state.vehicleCompany, vm::openVehicles)
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
+                    Tab.PLACES -> fr.tachoperso.app.ui.PlacesTab(history, vm::openDay)
                 }
             }
         }

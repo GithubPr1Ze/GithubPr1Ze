@@ -111,6 +111,9 @@ class DriverHistory(
 
     fun nightsOn(date: LocalDate): List<Night> = nights.filter { it.date == date }
 
+    /** Lieux de coupure connus à 2 km près, du plus fréquenté au moins fréquenté. */
+    val stops: List<Stop> = Stops.group(nights)
+
     val nightMonths: List<NightMonth> = Nights.months(nights)
 
 

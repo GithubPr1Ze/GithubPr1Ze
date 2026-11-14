@@ -1,5 +1,6 @@
 package fr.tachoperso.app
 
+import androidx.compose.foundation.background
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -82,6 +83,16 @@ class ScreenshotTest {
         val (_, h) = history()
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.FerryScreen(h) {} } } }
         shot("6-ferry")
+    }
+
+    @Test
+    fun places() {
+        val (_, h) = history()
+        // La carte (tuiles en ligne) est remplacée par un fond neutre.
+        val map: @androidx.compose.runtime.Composable (List<fr.tachoperso.core.rules.Stop>, fr.tachoperso.core.tacho.GeoPoint?, (fr.tachoperso.core.rules.Stop) -> Unit, androidx.compose.ui.Modifier) -> Unit =
+            { _, _, _, m -> androidx.compose.foundation.layout.Box(m.background(androidx.compose.ui.graphics.Color(0xFFDDE3EA))) }
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.PlacesTab(h, {}, map) } } }
+        shot("13-lieux")
     }
 
     private val rates = listOf(fr.tachoperso.core.rules.Rates(java.time.LocalDate.of(2026, 1, 1), "Avenant n° 81 du 2 décembre 2025", 16.36, 10.07, 9.81, 4.42, 8.87, 52.31, 68.67))
