@@ -36,6 +36,9 @@ fun DashboardTab(
     expenses: List<fr.tachoperso.core.rules.ShiftExpenses> = emptyList(),
     onOpenExpenses: () -> Unit = {},
     onExportPdf: (java.time.YearMonth) -> Unit = {},
+    rates: List<fr.tachoperso.core.rules.Rates> = emptyList(),
+    pay: fr.tachoperso.app.PaySettings = fr.tachoperso.app.PaySettings(),
+    onOpenPay: () -> Unit = {},
 ) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
@@ -70,6 +73,10 @@ fun DashboardTab(
                 )
                 KeyValue("Journées à plus de 9 h de conduite", "${a.extensionsUsed(monday)} / ${Limits.EXTENSIONS_PER_WEEK}")
             }
+        }
+
+        if (rates.isNotEmpty()) {
+            item { PaySummaryPanel(history, rates, pay, lastDate, onOpenPay) }
         }
 
         if (expenses.isNotEmpty()) {

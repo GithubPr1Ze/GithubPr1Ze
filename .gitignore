@@ -8,3 +8,6 @@ captures/
 .kotlin/
 samples/
 *.apk
+
+# Données personnelles (fiches de paye…) : jamais dans Git
+private/

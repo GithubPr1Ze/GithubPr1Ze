@@ -44,7 +44,7 @@ private fun ShiftExpenses.summary(): String =
 fun ExpensesSummaryPanel(months: List<ExpenseMonth>, lastDate: LocalDate, onOpen: () -> Unit) {
     val current = months.firstOrNull { it.month == YearMonth.from(lastDate) }
     val previous = months.firstOrNull { it.month == YearMonth.from(lastDate).minusMonths(1) }
-    Panel(title = "Frais de route (estimation)") {
+    Panel(title = "Frais de route — minimum légal (protocole)") {
         Row(Modifier.fillMaxWidth()) {
             Metric("Ce mois-ci", eur(current?.total ?: 0.0), Modifier.weight(1f))
             Metric("Mois dernier", eur(previous?.total ?: 0.0), Modifier.weight(1f))

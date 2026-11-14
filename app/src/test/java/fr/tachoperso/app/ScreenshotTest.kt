@@ -113,4 +113,12 @@ class ScreenshotTest {
         }
         org.junit.Assert.assertTrue(bitmaps.size in 2..4)
     }
+
+    @Test
+    fun pay() {
+        val (_, h) = history()
+        val slips = mapOf(java.time.YearMonth.of(2026, 10) to fr.tachoperso.core.rules.PayslipCounts(20, 20, 17, 21))
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.PayScreen(h, rates, PaySettings(), slips, false, {}, { _, _ -> }) } } }
+        shot("9-paye")
+    }
 }

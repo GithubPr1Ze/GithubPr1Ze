@@ -131,6 +131,19 @@ class DriverHistory(
     fun expenses(rates: List<Rates>, abroadMarkup: Boolean): List<ShiftExpenses> =
         Expenses.compute(analysis, nights, rates, zone) { abroadMarkup && isAbroad(it) }
 
+
+    /** Frais selon la pratique de l'employeur (voir [EmployerExpenses]). */
+    fun employerExpenses(rates: List<Rates>, markupPercent: Double): List<EmployerDay> =
+        EmployerExpenses.compute(analysis, nights, rates, zone, markupPercent)
+
+    /** Temps de service (minutes) des jours du mois, heure de Paris. */
+    fun monthService(month: java.time.YearMonth): Long =
+        localDays.filter { java.time.YearMonth.from(it.date) == month }.sumOf { it.serviceMinutes }
+
+    /** Heures de nuit (21 h – 6 h) des journées de travail commencées dans le mois. */
+    fun monthNight(month: java.time.YearMonth): Long =
+        analysis.shifts.filter { java.time.YearMonth.from(analysis.localDate(it.start)) == month }.sumOf { analysis.nightMinutes(it.periods) }
+
 }
 
 enum class LocationKind { DAY_START, DAY_END, DRIVING_3H }

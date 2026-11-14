@@ -23,6 +23,19 @@ data class DriverProfile(
 }
 
 /**
+ * Réglages de paye du conducteur, saisis d'après ses bulletins et gardés sur le téléphone :
+ * forfait d'heures payées, heures de nuit payées, net social mensuel (hors frais), impôt à la source,
+ * majoration des frais à l'étranger.
+ */
+data class PaySettings(
+    val paidHours: Double = 220.0,
+    val paidNightHours: Double = 40.0,
+    val netSocial: Double? = null,
+    val incomeTax: Double? = null,
+    val markupPercent: Double = 18.0,
+)
+
+/**
  * Stockage local : un dossier par conducteur (clé = pays + 14 premiers caractères du n° de carte,
  * stables lors d'un renouvellement), contenant profile.json et toutes les lectures .DDD.
  */
@@ -77,7 +90,13 @@ class DriverRepository(root: File) {
     }
 
     /** Réglages du conducteur : domicile déclaré et corrections manuelles des nuits. */
-    data class Settings(val home: GeoPoint?, val nights: Map<Instant, NightStatus>, val abroadMarkup: Boolean = false)
+    data class Settings(
+        val home: GeoPoint?,
+        val nights: Map<Instant, NightStatus>,
+        val abroadMarkup: Boolean = false,
+        val pay: PaySettings = PaySettings(),
+        val payslips: Map<java.time.YearMonth, fr.tachoperso.core.rules.PayslipCounts> = emptyMap(),
+    )
 
     fun settings(key: String): Settings {
         val f = File(driversDir, "$key/settings.json")
@@ -89,13 +108,38 @@ class DriverRepository(root: File) {
             val nights = n?.keys()?.asSequence()?.mapNotNull { k ->
                 runCatching { Instant.ofEpochSecond(k.toLong()) to NightStatus.valueOf(n.getString(k)) }.getOrNull()
             }?.toMap() ?: emptyMap()
-            Settings(home, nights, j.optBoolean("abroadMarkup", false))
+            val pay = j.optJSONObject("pay")?.let { o ->
+                PaySettings(
+                    paidHours = o.optDouble("paidHours", 220.0),
+                    paidNightHours = o.optDouble("paidNightHours", 40.0),
+                    netSocial = o.optDouble("netSocial").takeIf { !it.isNaN() },
+                    incomeTax = o.optDouble("incomeTax").takeIf { !it.isNaN() },
+                    markupPercent = o.optDouble("markupPercent", 18.0),
+                )
+            } ?: PaySettings()
+            val ps = j.optJSONObject("payslips")
+            val payslips = ps?.keys()?.asSequence()?.mapNotNull { k ->
+                runCatching {
+                    val o = ps.getJSONObject(k)
+                    java.time.YearMonth.parse(k) to fr.tachoperso.core.rules.PayslipCounts(o.getInt("dej"), o.getInt("din"), o.getInt("dec"), o.getInt("pdj"))
+                }.getOrNull()
+            }?.toMap() ?: emptyMap()
+            Settings(home, nights, j.optBoolean("abroadMarkup", false), pay, payslips)
         }.getOrElse { Settings(null, emptyMap()) }
     }
 
     fun setHome(key: String, home: GeoPoint?) = writeSettings(key, settings(key).copy(home = home))
 
     fun setAbroadMarkup(key: String, on: Boolean) = writeSettings(key, settings(key).copy(abroadMarkup = on))
+
+    fun setPay(key: String, pay: PaySettings) = writeSettings(key, settings(key).copy(pay = pay))
+
+    fun setPayslip(key: String, month: java.time.YearMonth, counts: fr.tachoperso.core.rules.PayslipCounts?) {
+        val s = settings(key)
+        val m = s.payslips.toMutableMap()
+        if (counts == null) m.remove(month) else m[month] = counts
+        writeSettings(key, s.copy(payslips = m))
+    }
 
     fun setNight(key: String, restStart: Instant, status: NightStatus?) {
         val s = settings(key)
@@ -111,6 +155,19 @@ class DriverRepository(root: File) {
         s.nights.forEach { (k, v) -> n.put(k.epochSecond.toString(), v.name) }
         j.put("nights", n)
         j.put("abroadMarkup", s.abroadMarkup)
+        j.put(
+            "pay",
+            JSONObject()
+                .put("paidHours", s.pay.paidHours)
+                .put("paidNightHours", s.pay.paidNightHours)
+                .put("markupPercent", s.pay.markupPercent)
+                .apply { s.pay.netSocial?.let { put("netSocial", it) }; s.pay.incomeTax?.let { put("incomeTax", it) } },
+        )
+        val ps = JSONObject()
+        s.payslips.forEach { (m, c) ->
+            ps.put(m.toString(), JSONObject().put("dej", c.dejeuners).put("din", c.diners).put("dec", c.decouchers).put("pdj", c.petitsDejeuners))
+        }
+        j.put("payslips", ps)
         val dir = File(driversDir, key).apply { mkdirs() }
         val tmp = File(dir, "settings.json.tmp")
         tmp.writeText(j.toString(2))

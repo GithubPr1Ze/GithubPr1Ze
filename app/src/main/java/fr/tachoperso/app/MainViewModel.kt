@@ -48,6 +48,10 @@ data class UiState(
     val bareme: BaremeRepository.Bareme? = null,
     /** Majoration de 18 % à l'étranger (art. 13, à défaut d'accord d'entreprise). */
     val abroadMarkup: Boolean = false,
+    /** Écran « Ma paye » ouvert. */
+    val openPay: Boolean = false,
+    val pay: PaySettings = PaySettings(),
+    val payslips: Map<java.time.YearMonth, fr.tachoperso.core.rules.PayslipCounts> = emptyMap(),
     val emailPrompt: EmailPrompt? = null,
 )
 
@@ -99,14 +103,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTab(tab: Tab) {
         prefs.edit().putString("tab", tab.name).apply()
-        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false) }
+        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false, openPay = false) }
     }
 
     fun openDay(date: LocalDate?) = _state.update { it.copy(openDay = date) }
 
-    fun openFerry(open: Boolean) = _state.update { it.copy(openFerry = open, openExpenses = false, openDay = null) }
+    fun openFerry(open: Boolean) = _state.update { it.copy(openFerry = open, openExpenses = false, openPay = false, openDay = null) }
 
-    fun openExpenses(open: Boolean) = _state.update { it.copy(openExpenses = open, openFerry = false, openDay = null) }
+    fun openExpenses(open: Boolean) = _state.update { it.copy(openExpenses = open, openFerry = false, openPay = false, openDay = null) }
+
+    fun openPay(open: Boolean) = _state.update { it.copy(openPay = open, openFerry = false, openExpenses = false, openDay = null) }
+
+    fun setPay(pay: PaySettings) {
+        val key = _state.value.selected?.key ?: return
+        _state.update { it.copy(pay = pay) }
+        viewModelScope.launch(Dispatchers.IO) { repo.setPay(key, pay) }
+    }
+
+    fun setPayslip(month: java.time.YearMonth, counts: fr.tachoperso.core.rules.PayslipCounts?) {
+        val key = _state.value.selected?.key ?: return
+        _state.update { s -> s.copy(payslips = s.payslips.toMutableMap().apply { if (counts == null) remove(month) else put(month, counts) }) }
+        viewModelScope.launch(Dispatchers.IO) { repo.setPayslip(key, month, counts) }
+    }
 
     fun setAbroadMarkup(on: Boolean) {
         val key = _state.value.selected?.key ?: return
@@ -115,7 +133,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Retour : ferme le jour ouvert, sinon l'écran ferry. */
-    fun back() = _state.update { if (it.openDay != null) it.copy(openDay = null) else it.copy(openFerry = false, openExpenses = false) }
+    fun back() = _state.update { if (it.openDay != null) it.copy(openDay = null) else it.copy(openFerry = false, openExpenses = false, openPay = false) }
 
     fun dismissMessage() = _state.update { it.copy(error = null, status = null) }
 
@@ -139,10 +157,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun select(key: String) {
         prefs.edit().putString("driver", key).apply()
         viewModelScope.launch {
-            _state.update { s -> s.copy(selected = s.drivers.firstOrNull { it.key == key }, loadingHistory = true, openDay = null, openFerry = false, openExpenses = false) }
+            _state.update { s -> s.copy(selected = s.drivers.firstOrNull { it.key == key }, loadingHistory = true, openDay = null, openFerry = false, openExpenses = false, openPay = false) }
             val history = withContext(Dispatchers.Default) { runCatching { repo.history(key) }.getOrNull() }
-            val abroad = withContext(Dispatchers.IO) { repo.settings(key).abroadMarkup }
-            _state.update { it.copy(history = history, loadingHistory = false, abroadMarkup = abroad) }
+            val settings = withContext(Dispatchers.IO) { repo.settings(key) }
+            _state.update {
+                it.copy(history = history, loadingHistory = false, abroadMarkup = settings.abroadMarkup, pay = settings.pay, payslips = settings.payslips)
+            }
         }
     }
 

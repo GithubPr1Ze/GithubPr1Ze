@@ -93,7 +93,7 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    val inDetail = state.openDay != null || state.openFerry || state.openExpenses
+    val inDetail = state.openDay != null || state.openFerry || state.openExpenses || state.openPay
     BackHandler(enabled = inDetail) { vm.back() }
 
     Scaffold(
@@ -204,9 +204,10 @@ fun MainScreen(vm: MainViewModel) {
                 history == null || profile == null -> EmptyState(state, vm::readCard)
                 state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight, expenses)
                 state.openFerry -> FerryScreen(history, vm::openDay)
+                state.openPay -> fr.tachoperso.app.ui.PayScreen(history, rates, state.pay, state.payslips, state.abroadMarkup, vm::setPay, vm::setPayslip)
                 state.openExpenses -> ExpensesScreen(expenses, state.bareme, state.abroadMarkup, vm::setAbroadMarkup, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }) { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }, rates, state.pay) { vm.openPay(true) }
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }
