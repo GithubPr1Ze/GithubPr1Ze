@@ -50,4 +50,7 @@ fun main(args: Array<String>) {
             println("  ${m.month} : %.2f €, repas ${m.meals}, découchers ${m.decouchers}, casse-croûte ${m.count(fr.tachoperso.core.rules.ExpenseKind.CASSE_CROUTE)}, nuit ${m.count(fr.tachoperso.core.rules.ExpenseKind.NIGHT)}, à préciser ${m.toClarify}".format(m.total))
         }
     }
+    val r = fr.tachoperso.core.rules.MonthlyReport.build(h, h.expenses(rates, false), java.time.YearMonth.of(2026, 10))
+    println("Récap ${r.month} : jours travaillés ${r.workedDays}, conduite ${hm(r.driving)}, service ${hm(r.service)}, nuit ${hm(r.nightMinutes)}, km ${r.km}, frais %.2f, découchés ${r.decouchers}, ferry ${r.ferry?.let { hm(it.minutes) }}, constats ${r.findings.size}".format(r.expenses?.total ?: 0.0))
+    r.weeks.forEach { println("  semaine ${it.monday} conduite ${hm(it.driving)} service ${hm(it.service)} >35 ${hm(it.over35)} >43 ${hm(it.over43)}") }
 }

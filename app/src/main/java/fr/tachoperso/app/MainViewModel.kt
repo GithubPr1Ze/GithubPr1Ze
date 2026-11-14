@@ -228,6 +228,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Dernière lecture du conducteur affiché, à exporter. */
     fun latestRead(): File? = _state.value.selected?.let { repo.reads(it.key).firstOrNull() }
 
+    /** Écrit le récapitulatif mensuel PDF du conducteur sélectionné. */
+    fun exportPdf(uri: Uri, month: java.time.YearMonth) {
+        val s = _state.value
+        val history = s.history ?: return
+        val profile = s.selected ?: return
+        val rates = s.bareme?.rates ?: emptyList()
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val report = fr.tachoperso.core.rules.MonthlyReport.build(history, history.expenses(rates, s.abroadMarkup), month)
+                    val bareme = rates.lastOrNull()?.let { "${it.source} (en vigueur le ${it.effective})" } ?: "indisponible"
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use {
+                        ReportPdf.write(it, report, profile.displayName, profile.cardNumber, bareme)
+                    } ?: throw CardException("Impossible d'écrire le fichier")
+                }
+                _state.update { it.copy(status = "Récapitulatif PDF enregistré.") }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = "PDF impossible : ${e.message}") }
+            }
+        }
+    }
+
     fun exportDdd(uri: Uri) {
         val file = latestRead() ?: return
         viewModelScope.launch {

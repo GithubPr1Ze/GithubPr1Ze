@@ -79,6 +79,11 @@ fun MainScreen(vm: MainViewModel) {
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) vm.exportDdd(uri)
     }
+    var pdfMonth by remember { mutableStateOf<java.time.YearMonth?>(null) }
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val m = pdfMonth
+        if (uri != null && m != null) vm.exportPdf(uri, m)
+    }
 
     LaunchedEffect(state.status, state.error) {
         val msg = state.error ?: state.status
@@ -201,7 +206,7 @@ fun MainScreen(vm: MainViewModel) {
                 state.openFerry -> FerryScreen(history, vm::openDay)
                 state.openExpenses -> ExpensesScreen(expenses, state.bareme, state.abroadMarkup, vm::setAbroadMarkup, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses) { vm.openExpenses(true) }
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }) { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

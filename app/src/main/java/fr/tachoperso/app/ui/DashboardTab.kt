@@ -35,6 +35,7 @@ fun DashboardTab(
     onSetHome: (fr.tachoperso.core.tacho.GeoPoint?) -> Unit = {},
     expenses: List<fr.tachoperso.core.rules.ShiftExpenses> = emptyList(),
     onOpenExpenses: () -> Unit = {},
+    onExportPdf: (java.time.YearMonth) -> Unit = {},
 ) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
@@ -49,6 +50,11 @@ fun DashboardTab(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        val reminders = fr.tachoperso.app.Reminders.due(profile)
+        if (reminders.isNotEmpty()) {
+            item { RemindersPanel(reminders) }
+        }
+
         item { DriverPanel(profile, history, onEditEmail) }
 
         item {
@@ -69,6 +75,8 @@ fun DashboardTab(
         if (expenses.isNotEmpty()) {
             item { ExpensesSummaryPanel(fr.tachoperso.core.rules.Expenses.months(expenses), lastDate, onOpenExpenses) }
         }
+
+        item { PdfPanel(history, onExportPdf) }
 
         if (history.nights.isNotEmpty()) {
             item { NightsSummaryPanel(history, lastDate, onSetHome) }
@@ -214,5 +222,49 @@ private fun CrossingsPanel(history: DriverHistory, monday: LocalDate, sunday: Lo
         )
         FerryMonthTable(history.ferryMonths.take(4))
         TextButton(onClick = onOpen, contentPadding = PaddingValues(0.dp)) { Text("Synthèse mensuelle détaillée") }
+    }
+}
+
+@Composable
+private fun RemindersPanel(reminders: List<fr.tachoperso.app.Reminder>) {
+    Panel(title = "Rappels") {
+        Column {
+            reminders.forEachIndexed { i, r ->
+                if (i > 0) Divider()
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        SeverityBadge(if (r.urgent) Severity.INFRACTION else Severity.WARNING, if (r.urgent) "Urgent" else "À prévoir")
+                        Text("  " + r.title, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text(r.text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+/** Export du récapitulatif mensuel PDF : un bouton par mois disponible (6 derniers). */
+@Composable
+private fun PdfPanel(history: DriverHistory, onExport: (java.time.YearMonth) -> Unit) {
+    val months = history.localDays.map { java.time.YearMonth.from(it.date) }.distinct().sortedDescending().take(6)
+    Panel(title = "Récapitulatif mensuel (PDF)") {
+        Text(
+            "Heures, semaines, frais de route, découchés et ferry du mois, jour par jour.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        months.chunked(3).forEach { row ->
+            androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { m ->
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { onExport(m) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    ) {
+                        Text(java.time.format.DateTimeFormatter.ofPattern("MMM yy", Locale.FRANCE).format(m), maxLines = 1)
+                    }
+                }
+            }
+        }
     }
 }

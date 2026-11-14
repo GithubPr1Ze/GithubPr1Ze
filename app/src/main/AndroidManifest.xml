@@ -3,6 +3,8 @@
 
     <!-- Lecture du barème public des frais de déplacement (GitHub). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Rappels : lecture de la carte avant 28 jours, expiration de la carte. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature
         android:name="android.hardware.usb.host"

@@ -93,4 +93,24 @@ class ScreenshotTest {
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.ExpensesScreen(h.expenses(rates, false), b, false, {}, {}) } } }
         shot("7-frais")
     }
+
+    @Test
+    fun pdfPages() {
+        val (p, h) = history()
+        val r = fr.tachoperso.core.rules.MonthlyReport.build(h, h.expenses(rates, false), java.time.YearMonth.of(2026, 10))
+        val bitmaps = mutableListOf<android.graphics.Bitmap>()
+        val pager = ReportPdf.Pager(
+            newPage = { _ ->
+                val b = android.graphics.Bitmap.createBitmap(ReportPdf.W * 2, ReportPdf.H * 2, android.graphics.Bitmap.Config.ARGB_8888)
+                bitmaps += b
+                android.graphics.Canvas(b).also { it.scale(2f, 2f) }
+            },
+            endPage = {},
+        )
+        ReportPdf.draw(pager, r, "CONDUCTEUR Exemple", "1000000000000003", "Avenant n° 81 (01/01/2026)")
+        bitmaps.forEachIndexed { i, b ->
+            java.io.File("${System.getProperty("tacho.shots")}/8-pdf-page${i + 1}.png").outputStream().use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
+        org.junit.Assert.assertTrue(bitmaps.size in 2..4)
+    }
 }
