@@ -80,6 +80,7 @@ fun DayDetail(
     date: LocalDate,
     onSetNight: (java.time.Instant, fr.tachoperso.core.rules.NightStatus?) -> Unit = { _, _ -> },
     expenses: List<fr.tachoperso.core.rules.ShiftExpenses> = emptyList(),
+    vehicleCompany: Map<String, String> = emptyMap(),
 ) {
     val a = history.analysis
     val day = history.localDays.firstOrNull { it.date == date }
@@ -101,6 +102,9 @@ fun DayDetail(
                         Metric("Repos", hm(day.restMinutes), Modifier.weight(1f))
                     }
                     KeyValue("Distance", "${day.distanceKm} km")
+                    history.vehiclesOn(date).forEach { v ->
+                        KeyValue("Véhicule", v.registration + (vehicleCompany[v.key]?.let { " · $it" } ?: ""))
+                    }
                 }
             }
         }

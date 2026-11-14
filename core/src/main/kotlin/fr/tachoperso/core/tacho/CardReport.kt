@@ -22,6 +22,10 @@ class CardReport(val dump: CardDump) {
     val places: List<PlaceRecord> =
         generation?.let { g -> data(0x0506)?.let { PlacesParser.places(it, g) } } ?: emptyList()
 
+    /** Véhicules utilisés (une entrée par insertion de la carte). */
+    val vehicleUses: List<VehicleUse> =
+        generation?.let { g -> data(0x0505)?.let { VehiclesParser.parse(it, g) } } ?: emptyList()
+
     /** Conditions particulières : ferry/train, hors champ. */
     val specificConditions: List<SpecificCondition> =
         generation?.let { g -> data(0x0522)?.let { SpecificConditionsParser.parse(it, g) } } ?: emptyList()

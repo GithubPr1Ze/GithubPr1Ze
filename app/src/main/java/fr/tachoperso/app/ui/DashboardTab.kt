@@ -41,6 +41,8 @@ fun DashboardTab(
     onOpenPay: () -> Unit = {},
     dayOverrides: Map<LocalDate, fr.tachoperso.core.rules.DayOverride> = emptyMap(),
     onOpenClarify: () -> Unit = {},
+    vehicleCompany: Map<String, String> = emptyMap(),
+    onOpenVehicles: () -> Unit = {},
 ) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
@@ -61,6 +63,10 @@ fun DashboardTab(
         }
 
         item { DriverPanel(profile, history, onEditEmail) }
+
+        if (history.vehicles.isNotEmpty()) {
+            item { VehiclesSummaryPanel(history, vehicleCompany, onOpenVehicles) }
+        }
 
         item {
             Panel(title = "Semaine du ${dayShort.format(monday)} au ${dayShort.format(sunday)}") {

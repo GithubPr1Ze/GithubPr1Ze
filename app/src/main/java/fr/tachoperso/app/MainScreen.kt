@@ -93,7 +93,7 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    val inDetail = state.openDay != null || state.openFerry || state.openExpenses || state.openPay || state.openClarify || state.openPayMonth != null
+    val inDetail = state.openDay != null || state.openFerry || state.openExpenses || state.openPay || state.openClarify || state.openPayMonth != null || state.openVehicles
     BackHandler(enabled = inDetail) { vm.back() }
 
     Scaffold(
@@ -202,10 +202,13 @@ fun MainScreen(vm: MainViewModel) {
             when {
                 state.loadingHistory -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 history == null || profile == null -> EmptyState(state, vm::readCard)
-                state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight, expenses)
+                state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight, expenses, state.vehicleCompany)
                 state.openFerry -> FerryScreen(history, vm::openDay)
                 state.openPayMonth != null -> fr.tachoperso.app.ui.MonthDaysEditor(
                     history, rates, state.pay.markupPercent, state.dayOverrides, state.openPayMonth!!, vm::setDayOverride, vm::openDay,
+                )
+                state.openVehicles -> fr.tachoperso.app.ui.VehiclesScreen(
+                    history, state.vehicleCompany.values.distinct().sorted(), state.vehicleCompany, vm::setVehicleCompany,
                 )
                 state.openClarify -> fr.tachoperso.app.ui.ClarifyScreen(history, vm::setNight, vm::openDay)
                 state.openPay -> fr.tachoperso.app.ui.PayScreen(
@@ -214,7 +217,7 @@ fun MainScreen(vm: MainViewModel) {
                 )
                 state.openExpenses -> ExpensesScreen(expenses, state.bareme, state.abroadMarkup, vm::setAbroadMarkup, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }, rates, state.pay, { vm.openPay(true) }, state.dayOverrides, vm::openClarify)
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses, { vm.openExpenses(true) }, { m -> pdfMonth = m; pdfLauncher.launch("TachoPerso_recap_$m.pdf") }, rates, state.pay, { vm.openPay(true) }, state.dayOverrides, vm::openClarify, state.vehicleCompany, vm::openVehicles)
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

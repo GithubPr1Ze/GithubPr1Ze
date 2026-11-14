@@ -136,4 +136,13 @@ class ScreenshotTest {
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.MonthDaysEditor(h, rates, 18.0, o, java.time.YearMonth.of(2026, 10), { _, _ -> }, {}) } } }
         shot("11-editeur-mois")
     }
+
+    @Test
+    fun vehicles() {
+        val (_, h) = history()
+        // Sociétés fictives : aucune donnée réelle dans les tests.
+        val vc = h.vehicles.mapIndexed { i, v -> v.key to (if (i < 3) "Société A" else "Société B") }.toMap()
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.VehiclesScreen(h, listOf("Société A", "Société B"), vc) { _, _ -> } } } }
+        shot("12-vehicules")
+    }
 }

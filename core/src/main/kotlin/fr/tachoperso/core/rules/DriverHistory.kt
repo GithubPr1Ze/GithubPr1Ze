@@ -147,6 +147,35 @@ class DriverHistory(
     fun monthNight(month: java.time.YearMonth): Long =
         analysis.shifts.filter { java.time.YearMonth.from(analysis.localDate(it.start)) == month }.sumOf { analysis.nightMinutes(it.periods) }
 
+
+    /** Utilisations de véhicules de toutes les lectures, sans doublon. */
+    val vehicleUses: List<fr.tachoperso.core.tacho.VehicleUse> = ordered.flatMap { it.vehicleUses }
+        .distinctBy { it.key to it.firstUse }.sortedBy { it.firstUse }
+
+    /** Véhicules utilisés, du plus récent au plus ancien. */
+    val vehicles: List<Vehicle> = vehicleUses.groupBy { it.key }
+        .map { (k, l) -> Vehicle(k, l.first().nation, l.first().registration, l.firstNotNullOfOrNull { it.vin }, l) }
+        .sortedByDescending { it.lastUse }
+
+    private fun dayBounds(date: LocalDate) = date.atStartOfDay(zone).toInstant() to date.plusDays(1).atStartOfDay(zone).toInstant()
+
+    /** Véhicules utilisés ce jour-là (heure de Paris). */
+    fun vehiclesOn(date: LocalDate): List<Vehicle> {
+        val (a, b) = dayBounds(date)
+        return vehicles.filter { v -> v.uses.any { it.firstUse < b && (it.lastUse ?: it.firstUse) >= a } }
+    }
+
+    /**
+     * Société d'un jour : celle du véhicule utilisé le plus longtemps ce jour-là, d'après
+     * l'affectation véhicule → société choisie par le conducteur.
+     */
+    fun companyOn(date: LocalDate, vehicleCompany: Map<String, String>): String? {
+        val (a, b) = dayBounds(date)
+        return vehicleUses.filter { it.firstUse < b && (it.lastUse ?: it.firstUse) >= a }
+            .maxByOrNull { java.time.Duration.between(maxOf(it.firstUse, a), minOf(it.lastUse ?: it.firstUse, b)) }
+            ?.let { vehicleCompany[it.key] }
+    }
+
 }
 
 enum class LocationKind { DAY_START, DAY_END, DRIVING_3H }
@@ -162,3 +191,20 @@ data class LocationEvent(
     val accuracyM: Int?,
     val odometerKm: Int,
 )
+
+/** Véhicule utilisé (regroupement de ses utilisations). */
+data class Vehicle(
+    val key: String,
+    val nation: String,
+    val registration: String,
+    val vin: String?,
+    val uses: List<fr.tachoperso.core.tacho.VehicleUse>,
+) {
+    val firstUse: Instant get() = uses.minOf { it.firstUse }
+    val lastUse: Instant get() = uses.maxOf { it.lastUse ?: it.firstUse }
+    val km: Int get() = uses.sumOf { it.km ?: 0 }
+    fun days(zone: ZoneId): Int = uses.flatMap { u ->
+        generateSequence(u.firstUse.atZone(zone).toLocalDate()) { it.plusDays(1) }
+            .takeWhile { !it.isAfter((u.lastUse ?: u.firstUse).atZone(zone).toLocalDate()) }.toList()
+    }.distinct().size
+}

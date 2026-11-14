@@ -57,6 +57,9 @@ data class UiState(
     val openClarify: Boolean = false,
     /** Mois ouvert dans l'éditeur des repas / découchers. */
     val openPayMonth: java.time.YearMonth? = null,
+    /** Écran « Véhicules et sociétés » ouvert. */
+    val openVehicles: Boolean = false,
+    val vehicleCompany: Map<String, String> = emptyMap(),
     val emailPrompt: EmailPrompt? = null,
 )
 
@@ -108,7 +111,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTab(tab: Tab) {
         prefs.edit().putString("tab", tab.name).apply()
-        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false, openPay = false, openClarify = false, openPayMonth = null) }
+        _state.update { it.copy(tab = tab, openDay = null, openFerry = false, openExpenses = false, openPay = false, openClarify = false, openPayMonth = null, openVehicles = false) }
     }
 
     fun openDay(date: LocalDate?) = _state.update { it.copy(openDay = date) }
@@ -143,8 +146,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             it.openDay != null -> it.copy(openDay = null)
             it.openPayMonth != null -> it.copy(openPayMonth = null)
             it.openClarify -> it.copy(openClarify = false)
-            else -> it.copy(openFerry = false, openExpenses = false, openPay = false)
+            else -> it.copy(openFerry = false, openExpenses = false, openPay = false, openVehicles = false)
         }
+    }
+
+    fun openVehicles() = _state.update { it.copy(openVehicles = true, openDay = null) }
+
+    fun setVehicleCompany(vehicle: String, company: String?) {
+        val key = _state.value.selected?.key ?: return
+        _state.update { s -> s.copy(vehicleCompany = s.vehicleCompany.toMutableMap().apply { if (company == null) remove(vehicle) else put(vehicle, company) }) }
+        viewModelScope.launch(Dispatchers.IO) { repo.setVehicleCompany(key, vehicle, company) }
     }
 
     fun openClarify() = _state.update { it.copy(openClarify = true, openPayMonth = null, openDay = null) }
@@ -183,7 +194,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val history = withContext(Dispatchers.Default) { runCatching { repo.history(key) }.getOrNull() }
             val settings = withContext(Dispatchers.IO) { repo.settings(key) }
             _state.update {
-                it.copy(history = history, loadingHistory = false, abroadMarkup = settings.abroadMarkup, pay = settings.pay, payslips = settings.payslips, dayOverrides = settings.days)
+                it.copy(history = history, loadingHistory = false, abroadMarkup = settings.abroadMarkup, pay = settings.pay, payslips = settings.payslips, dayOverrides = settings.days, vehicleCompany = settings.vehicleCompany)
             }
         }
     }

@@ -95,6 +95,8 @@ class DriverRepository(root: File) {
         val payslips: Map<java.time.YearMonth, fr.tachoperso.core.rules.PayslipCounts> = emptyMap(),
         /** Corrections manuelles des repas / découchers, par jour (mode employeur). */
         val days: Map<java.time.LocalDate, fr.tachoperso.core.rules.DayOverride> = emptyMap(),
+        /** Société de chaque véhicule (clé : pays + immatriculation). */
+        val vehicleCompany: Map<String, String> = emptyMap(),
     )
 
     fun settings(key: String): Settings {
@@ -129,7 +131,9 @@ class DriverRepository(root: File) {
                     java.time.LocalDate.parse(k) to fr.tachoperso.core.rules.DayOverride(b(o, "dej"), b(o, "din"), b(o, "pdj"), b(o, "dec"))
                 }.getOrNull()
             }?.toMap() ?: emptyMap()
-            Settings(home, nights, j.optBoolean("abroadMarkup", false), pay, payslips, days)
+            val vc = j.optJSONObject("vehicleCompany")
+            val vehicleCompany = vc?.keys()?.asSequence()?.associateWith { vc.getString(it) } ?: emptyMap()
+            Settings(home, nights, j.optBoolean("abroadMarkup", false), pay, payslips, days, vehicleCompany)
         }.getOrElse { Settings(null, emptyMap()) }
     }
 
@@ -138,6 +142,13 @@ class DriverRepository(root: File) {
     fun setAbroadMarkup(key: String, on: Boolean) = writeSettings(key, settings(key).copy(abroadMarkup = on))
 
     fun setPay(key: String, pay: PaySettings) = writeSettings(key, settings(key).copy(pay = pay))
+
+    fun setVehicleCompany(key: String, vehicle: String, company: String?) {
+        val s = settings(key)
+        val m = s.vehicleCompany.toMutableMap()
+        if (company.isNullOrBlank()) m.remove(vehicle) else m[vehicle] = company
+        writeSettings(key, s.copy(vehicleCompany = m))
+    }
 
     fun setDay(key: String, date: java.time.LocalDate, o: fr.tachoperso.core.rules.DayOverride?) {
         val s = settings(key)
@@ -189,6 +200,7 @@ class DriverRepository(root: File) {
             dj.put(d.toString(), x)
         }
         j.put("days", dj)
+        j.put("vehicleCompany", JSONObject(s.vehicleCompany as Map<*, *>))
         val dir = File(driversDir, key).apply { mkdirs() }
         val tmp = File(dir, "settings.json.tmp")
         tmp.writeText(j.toString(2))
