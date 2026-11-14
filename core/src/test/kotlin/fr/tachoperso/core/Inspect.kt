@@ -42,4 +42,12 @@ fun main(args: Array<String>) {
     val outAtStart = h.nights.count { n -> tl.any { it.cardOut && it.start <= n.rest.start.plusSeconds(900) && it.end > n.rest.start } }
     val outAtEnd = h.nights.count { n -> tl.any { it.cardOut && it.end >= n.rest.end.minusSeconds(900) && it.start < n.rest.end } }
     println("Nuits avec carte retirée au début : $outAtStart, à la fin : $outAtEnd, sur ${h.nights.size}")
+    val rates = listOf(fr.tachoperso.core.rules.Rates(java.time.LocalDate.of(2026, 1, 1), "Avenant 81", 16.36, 10.07, 9.81, 4.42, 8.87, 52.31, 68.67))
+    for (abroad in listOf(false, true)) {
+        val ex = h.expenses(rates, abroad)
+        println("Frais (majoration étranger $abroad) : total %.2f €".format(ex.sumOf { it.total }))
+        fr.tachoperso.core.rules.Expenses.months(ex).take(4).forEach { m ->
+            println("  ${m.month} : %.2f €, repas ${m.meals}, découchers ${m.decouchers}, casse-croûte ${m.count(fr.tachoperso.core.rules.ExpenseKind.CASSE_CROUTE)}, nuit ${m.count(fr.tachoperso.core.rules.ExpenseKind.NIGHT)}, à préciser ${m.toClarify}".format(m.total))
+        }
+    }
 }

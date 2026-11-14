@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "convention": "CCN des transports routiers et activités auxiliaires du transport (IDCC 16) — Protocole du 30 avril 1974 relatif aux frais de déplacement des ouvriers (annexe I)",
+  "secteur": "Transport routier de marchandises",
+  "devise": "EUR",
+  "misAJour": "2026-11-14",
+  "baremes": [
+    {
+      "dateEffet": "2026-01-01",
+      "statut": "en_vigueur",
+      "source": {
+        "texte": "Avenant n° 81 du 2 décembre 2025 relatif aux frais de déplacement des ouvriers au 1er janvier 2026",
+        "bocc": "BOCC 2026-01 TRA",
+        "nor": "ASET2551014M",
+        "extension": "Arrêté du 3 février 2026 (JO du 7 février 2026)"
+      },
+      "taux": {
+        "repas": 16.36,
+        "repasUnique": 10.07,
+        "repasUniqueNuit": 9.81,
+        "indemniteSpeciale": 4.42,
+        "casseCroute": 8.87,
+        "grandDeplacement1Repas": 52.31,
+        "grandDeplacement2Repas": 68.67
+      }
+    }
+  ],
+  "regles": {
+    "repas": {
+      "article": "Protocole art. 3",
+      "condition": "Service dont l'amplitude couvre entièrement 11h45–14h15 ou 18h45–21h15 (une indemnité par période couverte)."
+    },
+    "repasUnique": {
+      "article": "Protocole art. 4",
+      "condition": "Déplacement dans la zone de camionnage autour de Paris (remplace l'indemnité de repas)."
+    },
+    "casseCroute": {
+      "article": "Protocole art. 5",
+      "condition": "Prise de service avant 5h00.",
+      "nonCumulAvec": ["grandDeplacement", "repasUniqueNuit"]
+    },
+    "grandDeplacement": {
+      "article": "Protocole art. 6",
+      "condition": "Impossibilité de regagner son domicile pour le repos journalier ; 1 ou 2 repas pris dans les conditions de l'art. 3, plus le découcher."
+    },
+    "indemniteSpeciale": {
+      "article": "Protocole art. 7",
+      "condition": "Amplitude couvrant entièrement 11h00–14h30 ou 18h30–22h00, sans coupure d'au moins 1 h entre ces limites."
+    },
+    "repasUniqueNuit": {
+      "article": "Protocole art. 12",
+      "condition": "Service comportant au moins 4 h de travail effectif entre 22h00 et 7h00, si aucune autre indemnité n'est déjà perçue pour ce service."
+    },
+    "etranger": {
+      "article": "Protocole art. 13",
+      "condition": "À l'étranger : majoration de 18 % en l'absence d'accord d'entreprise ou individuel.",
+      "aVerifier": true
+    }
+  }
+}

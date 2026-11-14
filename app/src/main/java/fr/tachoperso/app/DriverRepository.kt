@@ -77,7 +77,7 @@ class DriverRepository(root: File) {
     }
 
     /** Réglages du conducteur : domicile déclaré et corrections manuelles des nuits. */
-    data class Settings(val home: GeoPoint?, val nights: Map<Instant, NightStatus>)
+    data class Settings(val home: GeoPoint?, val nights: Map<Instant, NightStatus>, val abroadMarkup: Boolean = false)
 
     fun settings(key: String): Settings {
         val f = File(driversDir, "$key/settings.json")
@@ -89,11 +89,13 @@ class DriverRepository(root: File) {
             val nights = n?.keys()?.asSequence()?.mapNotNull { k ->
                 runCatching { Instant.ofEpochSecond(k.toLong()) to NightStatus.valueOf(n.getString(k)) }.getOrNull()
             }?.toMap() ?: emptyMap()
-            Settings(home, nights)
+            Settings(home, nights, j.optBoolean("abroadMarkup", false))
         }.getOrElse { Settings(null, emptyMap()) }
     }
 
     fun setHome(key: String, home: GeoPoint?) = writeSettings(key, settings(key).copy(home = home))
+
+    fun setAbroadMarkup(key: String, on: Boolean) = writeSettings(key, settings(key).copy(abroadMarkup = on))
 
     fun setNight(key: String, restStart: Instant, status: NightStatus?) {
         val s = settings(key)
@@ -108,6 +110,7 @@ class DriverRepository(root: File) {
         val n = JSONObject()
         s.nights.forEach { (k, v) -> n.put(k.epochSecond.toString(), v.name) }
         j.put("nights", n)
+        j.put("abroadMarkup", s.abroadMarkup)
         val dir = File(driversDir, key).apply { mkdirs() }
         val tmp = File(dir, "settings.json.tmp")
         tmp.writeText(j.toString(2))

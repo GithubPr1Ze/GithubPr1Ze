@@ -113,6 +113,24 @@ class DriverHistory(
 
     val nightMonths: List<NightMonth> = Nights.months(nights)
 
+
+    /**
+     * Journée à l'étranger : repos suivant situé en Grande-Bretagne / Irlande, ou dernier pays
+     * saisi (début/fin de journée) avant la fin de ce repos différent de la France.
+     */
+    fun isAbroad(shift: Shift): Boolean {
+        val night = nights.firstOrNull { it.rest == shift.restAfter }
+        val p = night?.point
+        if (p != null && (night.uncertaintyKm ?: 99.0) <= 30 && Landmass.of(p) != Landmass.CONTINENT) return true
+        val until = shift.restAfter?.end ?: shift.end
+        val country = locations.lastOrNull { it.country != null && it.country.isNotBlank() && it.time >= shift.start && it.time <= until }?.country
+        return country != null && country != "F"
+    }
+
+    /** Frais de route par journée de travail ; majoration étranger (art. 13) si [abroadMarkup]. */
+    fun expenses(rates: List<Rates>, abroadMarkup: Boolean): List<ShiftExpenses> =
+        Expenses.compute(analysis, nights, rates, zone) { abroadMarkup && isAbroad(it) }
+
 }
 
 enum class LocationKind { DAY_START, DAY_END, DRIVING_3H }

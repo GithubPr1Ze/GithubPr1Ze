@@ -43,7 +43,7 @@ class ScreenshotTest {
     @Test
     fun dashboard() {
         val (p, h) = history()
-        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DashboardTab(p, h, {}, {}) } } }
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DashboardTab(p, h, {}, {}, expenses = h.expenses(rates, false)) } } }
         shot("1-tableau-de-bord")
     }
 
@@ -73,7 +73,7 @@ class ScreenshotTest {
     fun dayLocations() {
         val (_, h) = history()
         val date = h.localDays.map { it.date }.last { h.ferryOn(it).size >= 2 && h.locationsOn(it).size >= 2 }
-        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DayDetail(h, date) } } }
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DayDetail(h, date, expenses = h.expenses(rates, false)) } } }
         shot("5-detail-jour-positions")
     }
 
@@ -82,5 +82,15 @@ class ScreenshotTest {
         val (_, h) = history()
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.FerryScreen(h) {} } } }
         shot("6-ferry")
+    }
+
+    private val rates = listOf(fr.tachoperso.core.rules.Rates(java.time.LocalDate.of(2026, 1, 1), "Avenant n° 81 du 2 décembre 2025", 16.36, 10.07, 9.81, 4.42, 8.87, 52.31, 68.67))
+
+    @Test
+    fun expenses() {
+        val (_, h) = history()
+        val b = fr.tachoperso.app.BaremeRepository.Bareme(rates, "2026-11-14", "intégré à l'application")
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.ExpensesScreen(h.expenses(rates, false), b, false, {}, {}) } } }
+        shot("7-frais")
     }
 }

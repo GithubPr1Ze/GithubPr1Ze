@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.tachoperso.app.ui.CalendarTab
 import fr.tachoperso.app.ui.DashboardTab
 import fr.tachoperso.app.ui.DayDetail
+import fr.tachoperso.app.ui.ExpensesScreen
 import fr.tachoperso.app.ui.FerryScreen
 import fr.tachoperso.app.ui.DaysTab
 import fr.tachoperso.app.ui.Panel
@@ -87,7 +88,7 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    val inDetail = state.openDay != null || state.openFerry
+    val inDetail = state.openDay != null || state.openFerry || state.openExpenses
     BackHandler(enabled = inDetail) { vm.back() }
 
     Scaffold(
@@ -189,13 +190,18 @@ fun MainScreen(vm: MainViewModel) {
         Box(Modifier.fillMaxSize().padding(padding)) {
             val history = state.history
             val profile = state.selected
+            val rates = state.bareme?.rates ?: emptyList()
+            val expenses = androidx.compose.runtime.remember(history, rates, state.abroadMarkup) {
+                history?.expenses(rates, state.abroadMarkup) ?: emptyList()
+            }
             when {
                 state.loadingHistory -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 history == null || profile == null -> EmptyState(state, vm::readCard)
-                state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight)
+                state.openDay != null -> DayDetail(history, state.openDay!!, vm::setNight, expenses)
                 state.openFerry -> FerryScreen(history, vm::openDay)
+                state.openExpenses -> ExpensesScreen(expenses, state.bareme, state.abroadMarkup, vm::setAbroadMarkup, vm::openDay)
                 else -> when (state.tab) {
-                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome)
+                    Tab.DASHBOARD -> DashboardTab(profile, history, vm::openDay, vm::editEmail, { vm.openFerry(true) }, vm::setHome, expenses) { vm.openExpenses(true) }
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                 }

@@ -75,7 +75,12 @@ fun DaysTab(history: DriverHistory, onOpenDay: (LocalDate) -> Unit) {
 }
 
 @Composable
-fun DayDetail(history: DriverHistory, date: LocalDate, onSetNight: (java.time.Instant, fr.tachoperso.core.rules.NightStatus?) -> Unit = { _, _ -> }) {
+fun DayDetail(
+    history: DriverHistory,
+    date: LocalDate,
+    onSetNight: (java.time.Instant, fr.tachoperso.core.rules.NightStatus?) -> Unit = { _, _ -> },
+    expenses: List<fr.tachoperso.core.rules.ShiftExpenses> = emptyList(),
+) {
     val a = history.analysis
     val day = history.localDays.firstOrNull { it.date == date }
     val findings = a.findingsOn(date)
@@ -100,6 +105,7 @@ fun DayDetail(history: DriverHistory, date: LocalDate, onSetNight: (java.time.In
             }
         }
         history.nightsOn(date).forEach { n -> item { NightPanel(n, onSetNight) } }
+        expenses.filter { it.date == date }.forEach { e -> item { DayExpensesPanel(e) } }
         val crossings = history.ferryOn(date)
         if (crossings.isNotEmpty()) {
             item {

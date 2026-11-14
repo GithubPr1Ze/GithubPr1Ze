@@ -33,6 +33,8 @@ fun DashboardTab(
     onEditEmail: () -> Unit,
     onOpenFerry: () -> Unit = {},
     onSetHome: (fr.tachoperso.core.tacho.GeoPoint?) -> Unit = {},
+    expenses: List<fr.tachoperso.core.rules.ShiftExpenses> = emptyList(),
+    onOpenExpenses: () -> Unit = {},
 ) {
     val a = history.analysis
     val lastDate = history.localDays.firstOrNull()?.date ?: LocalDate.now(ZONE)
@@ -62,6 +64,10 @@ fun DashboardTab(
                 )
                 KeyValue("Journées à plus de 9 h de conduite", "${a.extensionsUsed(monday)} / ${Limits.EXTENSIONS_PER_WEEK}")
             }
+        }
+
+        if (expenses.isNotEmpty()) {
+            item { ExpensesSummaryPanel(fr.tachoperso.core.rules.Expenses.months(expenses), lastDate, onOpenExpenses) }
         }
 
         if (history.nights.isNotEmpty()) {
