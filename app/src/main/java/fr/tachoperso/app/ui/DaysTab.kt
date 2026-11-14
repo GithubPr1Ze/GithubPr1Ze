@@ -20,13 +20,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.tachoperso.core.rules.DriverHistory
+import fr.tachoperso.core.rules.LocationEvent
+import fr.tachoperso.core.rules.LocationKind
 import fr.tachoperso.core.rules.Severity
 import fr.tachoperso.core.rules.hm
 import fr.tachoperso.core.tacho.ActivityType
+import fr.tachoperso.core.tacho.GeoPoint
 import java.time.LocalDate
+import java.util.Locale
 
 @Composable
 fun DaysTab(history: DriverHistory, onOpenDay: (LocalDate) -> Unit) {
@@ -42,7 +47,8 @@ fun DaysTab(history: DriverHistory, onOpenDay: (LocalDate) -> Unit) {
                         SeverityBadge(severity)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text("${day.distanceKm} km", style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                    val countries = history.countriesOn(day.date)
+                    Text((countries?.let { "$it · " } ?: "") + "${day.distanceKm} km", style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DayBar(day.date, day.periods)
@@ -87,6 +93,19 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
                         Metric("Repos", hm(day.restMinutes), Modifier.weight(1f))
                     }
                     KeyValue("Distance", "${day.distanceKm} km")
+                }
+            }
+        }
+        val locations = history.locationsOn(date)
+        if (locations.isNotEmpty()) {
+            item {
+                Panel(title = "Lieux et positions") {
+                    Column {
+                        locations.forEachIndexed { i, l ->
+                            if (i > 0) Divider()
+                            LocationRow(l)
+                        }
+                    }
                 }
             }
         }
@@ -164,6 +183,53 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
         }
         item {
             Text(DISCLAIMER, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun LocationRow(l: LocationEvent) {
+    val uri = LocalUriHandler.current
+    val point = l.point
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (point != null) Modifier.clickable { openMap(uri::openUri, point, l.label) } else Modifier)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(l.time.localTime(), style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers), modifier = Modifier.width(56.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                l.label + (l.country?.ifBlank { null }?.let { " · $it" } ?: ""),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (l.kind == LocationKind.DRIVING_3H) FontWeight.Normal else FontWeight.SemiBold,
+            )
+            Text(
+                listOfNotNull(
+                    point?.label() ?: "Position non disponible",
+                    l.accuracyM?.let { "± $it m" },
+                    "%,d km".format(Locale.FRANCE, l.odometerKm),
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall.merge(TabularNumbers),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (point != null) {
+            Text("Carte", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+/** Ouvre l'application de cartes du téléphone ; à défaut, OpenStreetMap dans le navigateur. */
+private fun openMap(open: (String) -> Unit, p: GeoPoint, label: String) {
+    val lat = "%.5f".format(Locale.US, p.latitude)
+    val lon = "%.5f".format(Locale.US, p.longitude)
+    try {
+        open("geo:$lat,$lon?q=$lat,$lon(${android.net.Uri.encode(label)})")
+    } catch (_: Exception) {
+        try {
+            open("https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=15/$lat/$lon")
+        } catch (_: Exception) {
         }
     }
 }

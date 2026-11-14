@@ -20,4 +20,12 @@ fun main(args: Array<String>) {
     a.shifts.takeLast(12).forEach {
         println("  ${it.start.atZone(a.zone).toLocalDateTime()} → ${it.end.atZone(a.zone).toLocalTime()}  cond ${hm(it.driving)} trav ${hm(it.work)} dispo ${hm(it.availability)} service ${hm(it.service)} ampl ${hm(it.amplitude)} nuit ${hm(a.nightMinutes(it.periods))} reposApres ${it.restAfter?.minutes?.let(::hm)}")
     }
+    println("Lieux : ${h.places.size} (avec GNSS ${h.places.count { it.gnss?.point != null }}), positions 3 h : ${h.gnssDriving.size} (avec GNSS ${h.gnssDriving.count { it.gnss?.point != null }})")
+    h.places.firstOrNull()?.let { println("  du ${it.time} au ${h.places.last().time}") }
+    h.gnssDriving.firstOrNull()?.let { println("  GNSS du ${it.time} au ${h.gnssDriving.last().time}") }
+    println("  Pays : " + h.places.groupingBy { it.country }.eachCount().entries.sortedByDescending { it.value }.joinToString { "${it.key}=${it.value}" })
+    println("  Types : " + h.places.groupingBy { it.type?.name ?: "?" }.eachCount())
+    println("  Précisions (m) : " + h.locations.mapNotNull { it.accuracyM }.groupingBy { it }.eachCount().toSortedMap())
+    println("Dernières localisations :")
+    h.locations.takeLast(10).forEach { println("  ${it.time.atZone(a.zone).toLocalDateTime()} ${it.label} ${it.country ?: ""} ${it.point?.label() ?: "sans position"} ${it.odometerKm} km") }
 }

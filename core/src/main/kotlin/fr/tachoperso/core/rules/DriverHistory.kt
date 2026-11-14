@@ -3,7 +3,11 @@ package fr.tachoperso.core.rules
 import fr.tachoperso.core.tacho.CardIdentity
 import fr.tachoperso.core.tacho.CardReport
 import fr.tachoperso.core.tacho.DailyActivity
+import fr.tachoperso.core.tacho.GeoPoint
+import fr.tachoperso.core.tacho.GnssDrivingRecord
+import fr.tachoperso.core.tacho.PlaceRecord
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -31,4 +35,53 @@ class DriverHistory(
     }
     val analysis: Analysis = Analysis(timeline, zone)
     val localDays: List<LocalDay> = LocalDays.build(timeline, days, zone)
+
+    /** Lieux de début/fin de journée de toutes les lectures, sans doublon. */
+    val places: List<PlaceRecord> = ordered.flatMap { it.places }
+        .distinctBy { it.time to it.type }.sortedBy { it.time }
+
+    /** Positions « 3 h de conduite » de toutes les lectures, sans doublon. */
+    val gnssDriving: List<GnssDrivingRecord> = ordered.flatMap { it.gnssDriving }
+        .distinctBy { it.time }.sortedBy { it.time }
+
+    /** Tous les points de localisation, dans l'ordre chronologique. */
+    val locations: List<LocationEvent> = (
+        places.map { p ->
+            LocationEvent(
+                p.time,
+                if (p.isBegin) LocationKind.DAY_START else LocationKind.DAY_END,
+                p.type?.label ?: "Lieu (type inconnu)",
+                p.country,
+                p.gnss?.point,
+                p.gnss?.accuracyM,
+                p.odometerKm,
+            )
+        } + gnssDriving.map { g ->
+            LocationEvent(g.time, LocationKind.DRIVING_3H, "Position (3 h de conduite)", null, g.gnss?.point, g.gnss?.accuracyM, g.odometerKm)
+        }
+    ).sortedBy { it.time }
+
+    fun locationsOn(date: LocalDate): List<LocationEvent> =
+        locations.filter { it.time.atZone(zone).toLocalDate() == date }
+
+    /** Pays de début et de fin des lieux saisis ce jour-là (ex. « F → D »), null si aucun. */
+    fun countriesOn(date: LocalDate): String? {
+        val c = locationsOn(date).mapNotNull { it.country?.ifBlank { null } }
+        if (c.isEmpty()) return null
+        return if (c.first() == c.last()) c.first() else "${c.first()} → ${c.last()}"
+    }
 }
+
+enum class LocationKind { DAY_START, DAY_END, DRIVING_3H }
+
+/** Un point de localisation affichable : lieu saisi ou position automatique. */
+data class LocationEvent(
+    val time: Instant,
+    val kind: LocationKind,
+    val label: String,
+    /** Pays saisi (lieux de début/fin uniquement). */
+    val country: String?,
+    val point: GeoPoint?,
+    val accuracyM: Int?,
+    val odometerKm: Int,
+)

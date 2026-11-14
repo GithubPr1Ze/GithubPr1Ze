@@ -18,6 +18,14 @@ class CardReport(val dump: CardDump) {
     val currentUsage: CurrentUsage? = data(0x0507)?.let(CurrentUsage::parse)
     val days: List<DailyActivity> = data(0x0504)?.let(DriverActivityParser::parse) ?: emptyList()
 
+    /** Lieux de début/fin de journée (avec position GNSS en Gen2). */
+    val places: List<PlaceRecord> =
+        generation?.let { g -> data(0x0506)?.let { PlacesParser.places(it, g) } } ?: emptyList()
+
+    /** Positions toutes les 3 h de conduite (Gen2 uniquement). */
+    val gnssDriving: List<GnssDrivingRecord> =
+        if (generation == Generation.GEN2) data(0x0524)?.let(PlacesParser::gnssDriving) ?: emptyList() else emptyList()
+
     val generationLabel: String
         get() = when {
             generation == null -> "Inconnue"
