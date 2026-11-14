@@ -141,18 +141,67 @@ dans l'application.
 - Journal technique (copiable) pour le diagnostic.
 - APK compilé automatiquement par GitHub et téléchargeable depuis le téléphone.
 
-## 3. Versions suivantes (idées retenues, non planifiées)
+## 3. Version 2 — périmètre (décisions du 14/11/2026, à annoter)
 
-| Idée | Notes |
-|---|---|
-| Sauvegarde automatique sur le **NAS** à chaque lecture | NAS OMV maison ; méthode (SMB/SFTP/WebDAV) et accès à distance (WireGuard) à décider |
-| **Envoi par email** des rapports à chaque conducteur | graphiques + détails ; automatique ou manuel, fréquence à décider |
-| **Découchers et repas** à partir des positions GPS | comparaison au domicile/dépôt, correction manuelle |
-| **Fiche de paie estimée** | à partir du taux horaire ; brut précis, net approximatif ; besoin des intitulés de la fiche réelle |
-| Compteurs « temps restant » | conduite restante, prochaine pause, repos dû |
-| Véhicules, lieux, positions GPS, événements/anomalies | données déjà présentes sur la carte Gen2 |
-| Exports PDF / CSV | |
-| Rappel de lecture tous les 28 jours, notes sur une journée | |
+### 3.0 Principes modifiés
+- **Fuseau : heure de Paris partout**, y compris à l'étranger (jours, semaines, nuit, repas).
+- **Application individuelle** : liée au premier conducteur lu, par les **14 premiers caractères**
+  du n° de carte (identifiant conducteur). Les 2 derniers (remplacement / renouvellement,
+  ex. `003` → `004`) peuvent changer : la nouvelle carte est reconnue et son historique fusionné.
+  - Lecture d'une autre carte **refusée** ; consultation libre (protégée par le verrouillage du
+    téléphone, empreinte/code en option).
+  - Bouton **« Réinitialiser l'application »** (confirmation + export des .DDD avant effacement).
+  - Migration : à la mise à jour, choisir le propriétaire ; les autres dossiers sont proposés à
+    l'export puis supprimés. La liste des conducteurs (§ 2.2) disparaît.
+- **« Rien ne quitte le téléphone » est assoupli** pour deux échanges seulement : lecture du
+  barème public (§ 3.3) et envoi du rapport mensuel depuis le compte Google du conducteur (§ 3.5).
+
+### 3.1 Lot A — Positions
+- Décoder les lieux de début/fin de journée (EF Places) et les positions GNSS toutes les 3 h de
+  conduite (EF GNSS_Places). La carte de référence en contient (~112 lieux, ~336 points).
+- Pas de position si le véhicule n'a pas de chronotachygraphe intelligent : l'appli le gère.
+- Passages de frontière / chargements : uniquement cartes Gen2 V2 → plus tard.
+
+### 3.2 Lot B — Domicile et découchés
+- Repos > 24 h → lieu du repos ; domicile = zone (~2 km) la plus fréquente sur plusieurs semaines.
+- Lieux nommés (Maison, Dépôt…), domicile déclarable à la main.
+- Chaque nuit : domicile / découché, **corrigeable à la main** (la correction prime).
+- Statistiques des lieux de coupure (nuits en cabine, lieux fréquents, frais) **dans l'appli
+  seulement**, pas dans le PDF.
+
+### 3.3 Lot C — Frais de route
+- Barème public : https://github.com/GithubPr1Ze/tacho-perso-bareme (`bareme.json`, taux par
+  date d'effet + conditions par article du protocole du 30/04/1974). Vérifié à chaque démarrage,
+  dernière version gardée en cache (fonctionne hors réseau).
+- En vigueur : avenant n° 81 du 2/12/2025 (BOCC 2026-01, étendu le 3/02/2026), au 01/01/2026.
+- NAO 2027 : ajoutée au barème **uniquement une fois signée**.
+- Règles : repas (art. 3), casse-croûte (art. 5), grand déplacement (art. 6), indemnité
+  spéciale (art. 7), nuit (art. 12), étranger +18 % (art. 13, à vérifier).
+
+### 3.4 Lot D — Paye
+- Régime grand routier (équivalence, décompte, seuils 25 % / 50 %) **vérifié dans les textes**
+  avant de coder.
+- Taux de cotisation déduits de 3 fiches de paye déposées dans `private/` (exclu de Git),
+  enregistrés comme paramètres modifiables.
+- Comparaison fiche réelle (heures payées, brut, net) / estimation.
+
+### 3.5 Lot E — Rappels, rapport, onglet graphique
+- Rappels : téléchargement avant 28 jours, expiration de la carte.
+- Rapport mensuel PDF (heures + frais), généré sur le téléphone.
+- **Envoi automatique** le 1er du mois **depuis le compte Google du conducteur, vers lui seul**
+  (autorisation « envoi uniquement », pas de mot de passe stocké, aucune copie à un tiers).
+  WorkManager, nouvel essai si pas de réseau. .DDD bruts joints. Pas de Google Drive.
+  - Secours : notification « rapport prêt » → partage Android en un appui.
+  - Prérequis : projet Google Cloud, vraie clé de signature de l'APK (dans `secrets`).
+- Onglet graphique (Compose + Material 3, déjà en place) : frise de la journée, jauges de
+  conduite restante semaine/quinzaine, carte des points (OpenStreetMap, sans clé). Thème sombre
+  selon le téléphone, animations discrètes.
+
+### 3.6 Ordre
+A → B → C → E (rappels + PDF) → D → E (e-mail + graphique). Un APK testable par lot.
+
+### 3.7 Idées toujours en attente
+- Sauvegarde automatique sur le NAS, exports CSV, notes sur une journée.
 
 ## 4. Points ouverts
 
@@ -161,3 +210,4 @@ dans l'application.
 3. ~~Semaine~~ → lundi 00h00 – dimanche 24h00 (validé).
 4. ~~Style~~ → très pro (validé).
 5. ~~Contrôle RSE / Code du travail~~ → en V1 (validé).
+6. ~~Fuseau~~ → heure de Paris partout (validé 14/11/2026).
