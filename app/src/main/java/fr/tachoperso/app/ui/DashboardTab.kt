@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +23,7 @@ import fr.tachoperso.core.rules.hm
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Locale
 
 @Composable
 fun DashboardTab(profile: DriverProfile, history: DriverHistory, onOpenDay: (LocalDate) -> Unit, onEditEmail: () -> Unit) {
@@ -52,6 +55,10 @@ fun DashboardTab(profile: DriverProfile, history: DriverHistory, onOpenDay: (Loc
                 )
                 KeyValue("Journées à plus de 9 h de conduite", "${a.extensionsUsed(monday)} / ${Limits.EXTENSIONS_PER_WEEK}")
             }
+        }
+
+        if (history.crossings.isNotEmpty()) {
+            item { CrossingsPanel(history, monday, sunday, lastDate) }
         }
 
         if (lastShift != null) {
@@ -165,6 +172,47 @@ private fun DriverPanel(profile: DriverProfile, history: DriverHistory, onEditEm
         KeyValue("Données disponibles", if (first != null && last != null) "du ${dateFmt.format(first)} au ${dateFmt.format(last)}" else "—")
         TextButton(onClick = onEditEmail, contentPadding = PaddingValues(0.dp)) {
             Text(if (profile.email.isBlank()) "Ajouter un email" else "Modifier l'email")
+        }
+    }
+}
+
+
+/** Temps passé en mode ferry/train : semaine, mois, total et détail par mois. */
+@Composable
+private fun CrossingsPanel(history: DriverHistory, monday: LocalDate, sunday: LocalDate, lastDate: LocalDate) {
+    val all = history.crossings
+    val week = history.crossingsBetween(monday, sunday)
+    val month = history.crossingsBetween(lastDate.withDayOfMonth(1), lastDate)
+    Panel(title = "Ferry / train") {
+        Row(Modifier.fillMaxWidth()) {
+            Metric("Cette semaine", hm(week.sumOf { it.minutes }), Modifier.weight(1f))
+            Metric("Ce mois-ci", hm(month.sumOf { it.minutes }), Modifier.weight(1f))
+            Metric("Total", hm(all.sumOf { it.minutes }), Modifier.weight(1f))
+        }
+        Text(
+            "${all.size} traversée(s) depuis le ${dateFmt.format(all.first().start.atZone(ZONE))}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column {
+            history.crossingMonths.take(6).forEachIndexed { i, m ->
+                if (i > 0) Divider()
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                    Text(monthFmt.format(m.month).replaceFirstChar { it.titlecase(Locale.FRANCE) },
+                        style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Text("${m.count} trav.", style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(72.dp))
+                    Text(hm(m.minutes), style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers))
+                }
+            }
+        }
+        val unmeasured = all.count { !it.measured }
+        if (unmeasured > 0) {
+            Text(
+                "$unmeasured traversée(s) sans durée enregistrée (début et fin à la même minute) : non comptées dans les totaux.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

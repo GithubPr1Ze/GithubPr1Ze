@@ -4,6 +4,8 @@ import fr.tachoperso.core.tacho.GeoPoint
 import fr.tachoperso.core.tacho.Generation
 import fr.tachoperso.core.tacho.PlaceEntryType
 import fr.tachoperso.core.tacho.PlacesParser
+import fr.tachoperso.core.tacho.SpecificConditionType
+import fr.tachoperso.core.tacho.SpecificConditionsParser
 import fr.tachoperso.core.util.hex
 import java.time.Instant
 import kotlin.test.Test
@@ -63,5 +65,26 @@ class PlacesTest {
         assertEquals(10, g.gnss!!.accuracyM)
         assertTrue(g.gnss!!.point!!.longitude < 0)
         assertEquals("51°5,8' N 1°30,0' O", g.gnss!!.point!!.label())
+    }
+
+    @Test
+    fun `traversees ferry train appariees`() {
+        fun rec(sec: Long, type: Int) = "%08X%02X".format(sec, type)
+        val t0 = 0x690AE9F6L
+        // Gen2 : pointeur, ferry 51 min, ferry sans durée (même minute), hors champ, début sans fin
+        val d = hex(
+            "0004" + rec(t0, 3) + rec(t0 + 51 * 60, 4) + rec(t0 + 3600 * 5, 3) + rec(t0 + 3600 * 5, 4) +
+                rec(t0 + 3600 * 8, 1) + rec(t0 + 3600 * 30, 3) + "00".repeat(10),
+        )
+        val conds = SpecificConditionsParser.parse(d, Generation.GEN2)
+        assertEquals(6, conds.size)
+        assertEquals(SpecificConditionType.OUT_OF_SCOPE_BEGIN, conds[4].type)
+        val c = SpecificConditionsParser.crossings(conds)
+        assertEquals(3, c.size)
+        assertEquals(51, c[0].minutes)
+        assertTrue(c[0].measured)
+        assertEquals(0, c[1].minutes)
+        assertTrue(!c[1].measured)
+        assertNull(c[2].end)
     }
 }

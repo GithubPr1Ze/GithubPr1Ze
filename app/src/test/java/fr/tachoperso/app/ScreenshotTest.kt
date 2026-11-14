@@ -72,7 +72,7 @@ class ScreenshotTest {
     @Test
     fun dayLocations() {
         val (_, h) = history()
-        val date = h.localDays.map { it.date }.last { h.locationsOn(it).size >= 3 }
+        val date = h.localDays.map { it.date }.last { h.crossingsOn(it).size >= 2 && h.locationsOn(it).size >= 2 }
         compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { DayDetail(h, date) } } }
         shot("5-detail-jour-positions")
     }

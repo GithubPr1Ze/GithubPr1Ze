@@ -13,9 +13,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val placeNames = PlaceNames(applicationContext)
         setContent {
             fr.tachoperso.app.ui.TachoTheme {
-                MainScreen(viewModel)
+                androidx.compose.runtime.CompositionLocalProvider(LocalPlaceNames provides placeNames) {
+                    MainScreen(viewModel)
+                }
             }
         }
     }

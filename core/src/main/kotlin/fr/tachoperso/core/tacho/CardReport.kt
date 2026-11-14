@@ -22,6 +22,10 @@ class CardReport(val dump: CardDump) {
     val places: List<PlaceRecord> =
         generation?.let { g -> data(0x0506)?.let { PlacesParser.places(it, g) } } ?: emptyList()
 
+    /** Conditions particulières : ferry/train, hors champ. */
+    val specificConditions: List<SpecificCondition> =
+        generation?.let { g -> data(0x0522)?.let { SpecificConditionsParser.parse(it, g) } } ?: emptyList()
+
     /** Positions toutes les 3 h de conduite (Gen2 uniquement). */
     val gnssDriving: List<GnssDrivingRecord> =
         if (generation == Generation.GEN2) data(0x0524)?.let(PlacesParser::gnssDriving) ?: emptyList() else emptyList()

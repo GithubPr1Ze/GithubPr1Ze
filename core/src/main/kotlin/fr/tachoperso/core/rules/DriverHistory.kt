@@ -1,13 +1,17 @@
 package fr.tachoperso.core.rules
 
 import fr.tachoperso.core.tacho.CardIdentity
+import fr.tachoperso.core.tacho.Crossing
 import fr.tachoperso.core.tacho.CardReport
 import fr.tachoperso.core.tacho.DailyActivity
 import fr.tachoperso.core.tacho.GeoPoint
 import fr.tachoperso.core.tacho.GnssDrivingRecord
 import fr.tachoperso.core.tacho.PlaceRecord
+import fr.tachoperso.core.tacho.SpecificCondition
+import fr.tachoperso.core.tacho.SpecificConditionsParser
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 
 /**
@@ -64,6 +68,25 @@ class DriverHistory(
     fun locationsOn(date: LocalDate): List<LocationEvent> =
         locations.filter { it.time.atZone(zone).toLocalDate() == date }
 
+    /** Conditions particulières de toutes les lectures, sans doublon. */
+    val specificConditions: List<SpecificCondition> = ordered.flatMap { it.specificConditions }.distinct()
+
+    /** Traversées ferry/train, de la plus ancienne à la plus récente. */
+    val crossings: List<Crossing> = SpecificConditionsParser.crossings(specificConditions)
+
+    fun crossingsOn(date: LocalDate): List<Crossing> =
+        crossings.filter { it.start.atZone(zone).toLocalDate() == date }
+
+    /** Traversées commencées entre [from] et [to] inclus (dates de Paris). */
+    fun crossingsBetween(from: LocalDate, to: LocalDate): List<Crossing> =
+        crossings.filter { val d = it.start.atZone(zone).toLocalDate(); !d.isBefore(from) && !d.isAfter(to) }
+
+    /** Récapitulatif mensuel des traversées, du mois le plus récent au plus ancien. */
+    val crossingMonths: List<CrossingMonth> = crossings
+        .groupBy { YearMonth.from(it.start.atZone(zone)) }
+        .map { (m, l) -> CrossingMonth(m, l.size, l.count { !it.measured }, l.sumOf { it.minutes }) }
+        .sortedByDescending { it.month }
+
     /** Pays de début et de fin des lieux saisis ce jour-là (ex. « F → D »), null si aucun. */
     fun countriesOn(date: LocalDate): String? {
         val c = locationsOn(date).mapNotNull { it.country?.ifBlank { null } }
@@ -85,3 +108,6 @@ data class LocationEvent(
     val accuracyM: Int?,
     val odometerKm: Int,
 )
+
+/** Traversées d'un mois : nombre, dont durée non enregistrée, et temps total. */
+data class CrossingMonth(val month: YearMonth, val count: Int, val unmeasured: Int, val minutes: Long)

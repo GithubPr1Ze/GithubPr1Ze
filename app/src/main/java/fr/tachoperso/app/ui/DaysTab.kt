@@ -23,12 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import fr.tachoperso.app.LocalPlaceNames
+import fr.tachoperso.app.placeName
 import fr.tachoperso.core.rules.DriverHistory
 import fr.tachoperso.core.rules.LocationEvent
 import fr.tachoperso.core.rules.LocationKind
 import fr.tachoperso.core.rules.Severity
 import fr.tachoperso.core.rules.hm
 import fr.tachoperso.core.tacho.ActivityType
+import fr.tachoperso.core.tacho.Crossing
 import fr.tachoperso.core.tacho.GeoPoint
 import java.time.LocalDate
 import java.util.Locale
@@ -93,6 +96,19 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
                         Metric("Repos", hm(day.restMinutes), Modifier.weight(1f))
                     }
                     KeyValue("Distance", "${day.distanceKm} km")
+                }
+            }
+        }
+        val crossings = history.crossingsOn(date)
+        if (crossings.isNotEmpty()) {
+            item {
+                Panel(title = "Ferry / train") {
+                    Column {
+                        crossings.forEachIndexed { i, c ->
+                            if (i > 0) Divider()
+                            CrossingRow(c)
+                        }
+                    }
                 }
             }
         }
@@ -191,6 +207,7 @@ fun DayDetail(history: DriverHistory, date: LocalDate) {
 private fun LocationRow(l: LocationEvent) {
     val uri = LocalUriHandler.current
     val point = l.point
+    val name = placeName(point, LocalPlaceNames.current)
     Row(
         Modifier.fillMaxWidth()
             .then(if (point != null) Modifier.clickable { openMap(uri::openUri, point, l.label) } else Modifier)
@@ -206,7 +223,7 @@ private fun LocationRow(l: LocationEvent) {
             )
             Text(
                 listOfNotNull(
-                    point?.label() ?: "Position non disponible",
+                    name ?: point?.label() ?: "Position non disponible",
                     l.accuracyM?.let { "± $it m" },
                     "%,d km".format(Locale.FRANCE, l.odometerKm),
                 ).joinToString(" · "),
@@ -231,5 +248,22 @@ private fun openMap(open: (String) -> Unit, p: GeoPoint, label: String) {
             open("https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=15/$lat/$lon")
         } catch (_: Exception) {
         }
+    }
+}
+
+@Composable
+fun CrossingRow(c: Crossing, showDate: Boolean = false) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            (if (showDate) "${c.start.local()}" else c.start.localTime()) +
+                (c.end?.takeIf { c.measured }?.let { " – ${it.localTime()}" } ?: ""),
+            style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            if (c.measured) hm(c.minutes) else "durée non enregistrée",
+            style = if (c.measured) MaterialTheme.typography.bodyMedium.merge(TabularNumbers) else MaterialTheme.typography.bodySmall,
+            color = if (c.measured) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
