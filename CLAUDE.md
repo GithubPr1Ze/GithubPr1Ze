@@ -11,7 +11,7 @@ fuseau **Europe/Paris** partout. Fonctionnalités et décisions : [CAHIER_DES_CH
   Tests avec données fictives (domicile de test = Arras 50.291, 2.777 ; « Société A/B »).
   `samples/` (dump réel) et `private/` sont ignorés par git.
 - Discuter d'une nouvelle fonctionnalité et obtenir un « go » avant de coder.
-- Commits : `git -c user.name=Claude -c user.email=noreply@anthropic.com commit` (ne jamais modifier
+- Commits : `git -c user.name=GithubPr1Ze -c user.email=133530535+GithubPr1Ze@users.noreply.github.com commit` (ne jamais modifier
   la config git), ligne `Co-Authored-By` en fin de message. Branche `claude/android-driver-card-reader-i3lwnd`.
 - Monter `versionCode` / `versionName` dans [app/build.gradle.kts](app/build.gradle.kts) à chaque livraison.
 
