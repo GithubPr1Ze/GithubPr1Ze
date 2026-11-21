@@ -233,6 +233,7 @@ fun MainScreen(vm: MainViewModel) {
                                         Tab.CALENDAR -> Icons.Filled.DateRange
                                         Tab.DAYS -> Icons.AutoMirrored.Filled.List
                                         Tab.PLACES -> Icons.Filled.Place
+                                        Tab.AMPLITUDE -> fr.tachoperso.app.ui.ClockIcon
                                     },
                                     contentDescription = null,
                                 )
@@ -274,6 +275,7 @@ fun MainScreen(vm: MainViewModel) {
                     Tab.CALENDAR -> CalendarTab(history, vm::openDay)
                     Tab.DAYS -> DaysTab(history, vm::openDay)
                     Tab.PLACES -> fr.tachoperso.app.ui.PlacesTab(history, vm::openDay)
+                    Tab.AMPLITUDE -> fr.tachoperso.app.ui.AmplitudeTab(history, state.pay.paidHours, vm::openDay)
                 }
             }
         }

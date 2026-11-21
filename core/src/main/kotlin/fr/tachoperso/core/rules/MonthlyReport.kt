@@ -34,6 +34,7 @@ data class MonthlyReport(
     val nightsToClarify: Int,
     val ferry: FerryMonth?,
     val findings: List<Finding>,
+    val amplitude: AmplitudeMonth = AmplitudeMonth(YearMonth.of(2000, 1), emptyList()),
 ) {
     val driving: Long get() = days.sumOf { it.driving }
     val work: Long get() = days.sumOf { it.work }
@@ -76,6 +77,7 @@ data class MonthlyReport(
                 nightsToClarify = nights.count { it.status == null },
                 ferry = history.ferryMonths.firstOrNull { it.month == month },
                 findings = a.findings.filter { inMonth(a.localDate(it.at)) },
+                amplitude = Amplitude.months(a).firstOrNull { it.month == month } ?: AmplitudeMonth(month, emptyList()),
             )
         }
     }

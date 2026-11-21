@@ -95,6 +95,13 @@ class ScreenshotTest {
         shot("13-lieux")
     }
 
+    @Test
+    fun amplitude() {
+        val (_, h) = history()
+        compose.setContent { TachoTheme { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) { fr.tachoperso.app.ui.AmplitudeTab(h, 220.0) {} } } }
+        shot("14-amplitude")
+    }
+
     private val rates = listOf(fr.tachoperso.core.rules.Rates(java.time.LocalDate.of(2026, 1, 1), "Avenant n° 81 du 2 décembre 2025", 16.36, 10.07, 9.81, 4.42, 8.87, 52.31, 68.67))
 
     @Test

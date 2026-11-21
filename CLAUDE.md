@@ -37,7 +37,7 @@ export JAVA_HOME=$(ls -d ../dev-tools/jdk-17* | head -1)
 - `rules/` : `Timeline`/`Analysis` (RSE, conduite, service, nuit), **`DriverHistory`** (point d'entrée :
   fusionne les lectures, lieux, nuits, ferry, véhicules, frais), `Nights` (domicile/découché, lieu du repos),
   `Stops` (lieux de coupure regroupés à 2 km), `Ferry`, `Expenses` (protocole 1974, avenant 81), `EmployerExpenses` (mode employeur ×1,18 + corrections
-  par jour), `MonthlyReport`.
+  par jour), `Amplitude` (prise → fin de poste − 45 min si conduite > 4h30 ou amplitude > 6h, par mois), `MonthlyReport`.
 - Tests : un fichier par sujet dans `core/src/test/kotlin` ; `FakeTachoCard` simule une carte.
 
 **app/** (Compose, Material 3)
@@ -50,7 +50,7 @@ export JAVA_HOME=$(ls -d ../dev-tools/jdk-17* | head -1)
   `MonthlyMail` (e-mail prérempli via la messagerie du téléphone, PDF + .DDD, FileProvider),
   `ReportPdf`, `Backup` (.zip complet), `PlaceNames` (géocodage en cache), `UsbReaders`.
 - `ui/` : un fichier par écran ou onglet (Dashboard, Calendar, Days, Places = onglet Lieux, Ferry,
-  Expenses, Pay, Nights, Edit = repos à préciser/corrections, Vehicles) ; `StopsMap` (seul fichier
+  Amplitude = onglet Amplitude, Expenses, Pay, Nights, Edit = repos à préciser/corrections, Vehicles) ; `StopsMap` (seul fichier
   qui touche osmdroid, bibliothèque archivée fin 2024) ; `Components` (Panel, KeyValue…), `Theme`.
 
 ## Restant à faire

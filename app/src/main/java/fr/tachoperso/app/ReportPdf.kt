@@ -28,6 +28,8 @@ object ReportPdf {
     private val dayFmt = DateTimeFormatter.ofPattern("EEE dd/MM", fr)
     private val shortFmt = DateTimeFormatter.ofPattern("dd/MM", fr)
     private val genFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", fr)
+    private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", fr)
+    private val paris = java.time.ZoneId.of("Europe/Paris")
     private const val ACCENT = 0xFF1F3A5F.toInt()
     private const val MUTED = 0xFF5F6670.toInt()
     private const val RULE = 0xFFD5D9DF.toInt()
@@ -78,6 +80,34 @@ object ReportPdf {
             p.row(listOf("${shortFmt.format(w.monday)} au ${shortFmt.format(w.monday.plusDays(6))}", hm(w.driving), hm(w.service), hm(w.over35), hm(w.over43)), wk)
         }
         p.note("Semaines entières, y compris les jours hors du mois. 43 h : durée d'équivalence des grands routiers.")
+
+        val am = r.amplitude
+        p.heading("Amplitude des journées de travail")
+        p.grid(
+            listOf(
+                "Journées" to "${am.count}",
+                "Amplitude totale" to hm(am.gross),
+                "Coupures retirées" to hm(am.deductions),
+                "Amplitude − coupure" to hm(am.net),
+                "Moyenne par journée" to hm(am.average),
+                "Plus longue journée" to (am.longest?.let { "${hm(it.amplitude)} (${dayFmt.format(it.date)})" } ?: "—"),
+            ),
+        )
+        if (am.days.isNotEmpty()) {
+            val ak = floatArrayOf(90f, 130f, 75f, 75f, 70f, 75f)
+            p.row(listOf("Prise de poste", "Horaires", "Conduite", "Amplitude", "Coupure", "Retenu"), ak, header = true, size = 8f)
+            am.days.forEach { d ->
+                p.row(
+                    listOf(
+                        dayFmt.format(d.date),
+                        "${timeFmt.format(d.shift.start.atZone(paris))} – ${timeFmt.format(d.shift.end.atZone(paris))}" + if (d.inProgress) " (en cours)" else "",
+                        hm(d.driving), hm(d.amplitude), if (d.deduction > 0) "−${hm(d.deduction)}" else "", hm(d.net),
+                    ),
+                    ak, size = 8f,
+                )
+            }
+        }
+        p.note("Amplitude = prise → fin de poste (journée rattachée au jour de prise de poste). 45 min de coupure retirées si la conduite dépasse 4 h 30 ou l'amplitude 6 h.")
 
         p.heading("Frais de route")
         val fk = floatArrayOf(330f, 60f, 125f)
